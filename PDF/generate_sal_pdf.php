@@ -1,8 +1,7 @@
 <?php
+session_start(); 
 require('../fpdf/fpdf.php');
 require('../conexion.php');
-
-if (isset($_POST['generar_pdf'])) {
     class PDF extends FPDF {
         function Header() {
             $image_path = __DIR__ . '/../assets/img/fondopdf.jpeg';
@@ -65,24 +64,11 @@ if (isset($_POST['generar_pdf'])) {
         $pdf->Cell(85, 10, utf8_decode($row['body']), 1, 0, 'C');
         $pdf->Cell(25, 10, $row['id_user'], 1, 1, 'C');
     }
+// Forzar la descarga del PDF
+header('Content-Type: application/pdf');
+header('Content-Disposition: attachment; filename="reporte_salidas.pdf"');
+header('Cache-Control: max-age=0');
 
-    $pdf->Output();
-    exit();
-}
-
+$pdf->Output('F', 'php://output'); // Enviar el PDF al navegador para descarga
+exit();
 ?>
-
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generar PDF</title>
-</head>
-<body>
-    <h2>Generar PDF de Salidas</h2>
-    <form method="post">
-        <button type="submit" name="generar_pdf">Generar PDF</button>
-    </form>
-</body>
-</html>

@@ -12,27 +12,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $ruc = htmlspecialchars($_POST['ruc']);
     $servicio_empresa = htmlspecialchars($_POST['servicio_empresa']);
 
-    // Validar que los campos no estén vacíos
     if (!empty($nombre) && !empty($ruc) && !empty($servicio_empresa)) {
-        // Nombre fijo de la tabla
-        $tabla = "tbl_empresa";
-
-        // Preparar la consulta SQL para insertar datos
-        $sql = "INSERT INTO $tabla (nombre, ruc, servicio_empresa) VALUES (?, ?, ?)";
-
-        // Preparar la sentencia
+        $sql = "INSERT INTO tbl_empresa (nombre, ruc, servicio_empresa) VALUES (?, ?, ?)";
+        
         if ($stmt = $conn->prepare($sql)) {
-            // Enlazar los parámetros
             $stmt->bind_param("sss", $nombre, $ruc, $servicio_empresa);
-
-            // Ejecutar la consulta
             if ($stmt->execute()) {
-                $mensaje = "¡Datos guardados correctamente!";
+
+                header("Refresh: 1; URL=../pages/Admin/empresa.php");
+                exit(); 
+                
             } else {
                 $mensaje = "Error al guardar los datos: " . $stmt->error;
             }
-
-            // Cerrar la sentencia
             $stmt->close();
         } else {
             $mensaje = "Error al preparar la consulta: " . $conn->error;
@@ -62,7 +54,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <div class="text-base text-[var(--verde-oscuro)]">Agregar Datos</div>
                     </strong>
                     <div class="mt-2 text-sm text-[var(--verde-oscuro)]">
-                        Editando tabla: Empresa
+                        Agregando a tabla: Empresa
                     </div>
                 </div>
             </div>
@@ -72,7 +64,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="mb-10 text-green-500"><?php echo $mensaje; ?></div>
         <?php endif; ?>
 
-        <form method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+        
+        <form action="agregaremp.php" method="POST">
 
             <div class="grid grid-cols-2 gap-6 mb-10">
                 <!-- Nombre -->
@@ -99,9 +92,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 <!-- Servicio -->
                 <div id="input" class="relative">
-                    <input type="text" id="servicio_empresa" name="servicio_empresa"
-                        class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Servicio" value="<?php echo $servicio_empresa; ?>" required />
+                    <textarea id="servicio_empresa" name="servicio_empresa"
+                        class="block w-full text-sm px-4 py-2 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-auto resize-none"
+                        placeholder="Servicio" required
+                        oninput="autoResize(this)"><?php echo $servicio_empresa; ?></textarea>
                     <label for="servicio_empresa"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Servicio
@@ -127,5 +121,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
         </form>
     </div>
+
+    <script>
+    function autoResize(textarea) {
+        // Reset the height to auto to recalculate the height
+        textarea.style.height = 'auto';
+        // Set the height to the scrollHeight (content height)
+        textarea.style.height = textarea.scrollHeight + 'px';
+    }
+
+    // Apply auto-resize when the page loads (in case there's pre-filled content)
+    document.addEventListener("DOMContentLoaded", function () {
+        const textarea = document.getElementById('descripcion');
+        autoResize(textarea);
+    });
+    </script>
 </body>
 </html>

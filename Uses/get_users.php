@@ -1,4 +1,4 @@
-<?php
+<?php   
 include '../conexion.php';
 
 $sql = "SELECT id_user, username FROM tbl_users";

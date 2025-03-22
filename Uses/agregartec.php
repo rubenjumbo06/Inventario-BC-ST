@@ -28,7 +28,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             // Ejecutar la consulta
             if ($stmt->execute()) {
-                $mensaje = "¡Datos guardados correctamente!";
+                header("Refresh: 1; URL=../pages/Admin/tecnico.php");
+                exit(); 
             } else {
                 $mensaje = "Error al guardar los datos: " . $stmt->error;
             }

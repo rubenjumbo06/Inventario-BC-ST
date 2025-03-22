@@ -1,6 +1,6 @@
 <?php
 require_once("../conexion.php");
-
+session_start(); 
 // Verificar la conexión
 if ($conn->connect_error) {
     die("Error de conexión: " . $conn->connect_error);
@@ -18,6 +18,12 @@ if (isset($_GET['id_consumibles']) && is_numeric($_GET['id_consumibles'])) {
     if (!$consumible) {
         die("Consumible no encontrado.");
     }
+
+    // Pasar los valores a la vista
+    $id_empresa_selected = $consumible['id_empresa'];
+    $estado_consumibles_selected = $consumible['estado_consumibles'];
+    $utilidad_consumibles_selected = $consumible['utilidad_consumibles'];
+    $id_user_selected = $consumible['id_user'];
 } else {
     die("ID inválido.");
 }
@@ -78,19 +84,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Eliminar la última coma y espacio
     $sql = rtrim($sql, ", ");
 
-    // Agregar la condición WHERE
     $sql .= " WHERE id_consumibles=?";
     $params[] = $id_consumibles;
     $types .= "i";
 
-    // Preparar y ejecutar la consulta
     $stmt = $conn->prepare($sql);
     $stmt->bind_param($types, ...$params);
 
     if ($stmt->execute()) {
-        echo "<script>window.location.href='../pages/consumibles.php';</script>";
+
+        if ($_SESSION['role'] == 'admin') {
+            // Redirigir a la página de activos del administrador
+            echo "<script>window.location.href='../pages/Admin/consumibles.php';</script>";
+        } else if ($_SESSION['role'] == 'user') {
+            // Redirigir a la página de activos del usuario
+            echo "<script>window.location.href='../pages/Usuario/consumibles.php';</script>";
+        }else{
+            // Redirigir a la página de activos del usuario
+            echo "<script>window.location.href='../pages/Tecnico/consumibles.php';</script>";
+        }
     } else {
-        echo "<script>alert('Error al actualizar el consumible');</script>";
+        // Mostrar un mensaje de error si la ejecución falla
+        echo "<script>alert('Error al actualizar el activo');</script>";
         echo $stmt->error; // Mostrar errores en la ejecución de la consulta
     }
 }
@@ -172,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <!-- Utilidad -->
                 <div id="input" class="relative">
-                    <select name="utilidad_consumibles" id="estado_select" class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-hidden pr-[48px]">
+                    <select name="utilidad_consumibles" id="utilidad_select" class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-hidden pr-[48px]">
                         <option value="" disabled selected>Selecciona una Utilidad</option>
                     </select>
                     <label
@@ -213,7 +228,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
     <script>
     document.addEventListener("DOMContentLoaded", function () {
-    function cargarDatos(endpoint, selectId) {
+    function cargarDatos(endpoint, selectId, selectedValue) {
         fetch(endpoint)
             .then(response => response.json())
             .then(data => {
@@ -245,17 +260,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 data.forEach(item => {
                     let option = document.createElement("option");
                     option.value = item.id_empresa || item.id_estado || item.id_utilidad || item.id_user;
-                    option.textContent = item.nombre || item.nombre_estado || item.nombre_utilidad || item.username ;
+                    option.textContent = item.nombre || item.nombre_estado || item.nombre_utilidad || item.username;
+                    if (option.value == selectedValue) {
+                        option.selected = true;
+                    }
                     select.appendChild(option);
                 });
             })
             .catch(error => console.error("Error cargando los datos:", error));
     }
-        cargarDatos("get_empresas.php", "empresa_select");
-        cargarDatos("get_estados.php", "estado_select");
-        cargarDatos("get_users.php", "users_select");
-        cargarDatos("get_utilidades.php", "utilidad_select");
-        });
+
+    // Obtener los valores seleccionados desde PHP
+    let id_empresa_selected = "<?= $id_empresa_selected ?>";
+    let estado_consumibles_selected = "<?= $estado_consumibles_selected ?>";
+    let utilidad_consumibles_selected = "<?= $utilidad_consumibles_selected ?>";
+    let id_user_selected = "<?= $id_user_selected ?>";
+
+    // Cargar los datos y seleccionar el valor correcto
+    cargarDatos("get_empresas.php", "empresa_select", id_empresa_selected);
+    cargarDatos("get_estados.php", "estado_select", estado_consumibles_selected);
+    cargarDatos("get_users.php", "users_select", id_user_selected);
+    cargarDatos("get_utilidades.php", "utilidad_select", utilidad_consumibles_selected);
+});
     </script>
 </body>
 </html>

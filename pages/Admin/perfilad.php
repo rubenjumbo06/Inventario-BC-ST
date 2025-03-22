@@ -1,5 +1,5 @@
 <?php
-require_once("../conexion.php"); 
+require_once("../../conexion.php"); 
 // Obtener el ID del usuario desde la URL o sesión
 $id_user = isset($_GET['id_user']) ? intval($_GET['id_user']) : 1; // Por defecto, usa el ID 1 si no se proporciona uno
 
@@ -28,13 +28,13 @@ $conn->close();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Profile</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="../assets/CSS/agg.css">
+    <link rel="stylesheet" href="../../assets/CSS/agg.css">
 </head>
 <body class="bg-[var(--celeste)] min-h-screen flex items-center justify-center p-4">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full p-8 transition-all duration-300 animate-fade-in">
         <div class="flex flex-col md:flex-row">
             <div class="md:w-1/3 text-center mb-8 md:mb-0">
-                <img src="../assets/img/p1.jpeg" alt="Profile Picture" class="rounded-full w-48 h-48 mx-auto mb-2 border-4 border-[#22694c] dark:border-[#22694c] transition-transform duration-300 hover:scale-95">
+                <img src="../../assets/img/p1.jpeg" alt="Profile Picture" class="rounded-full w-48 h-48 mx-auto mb-2 border-4 border-[#22694c] dark:border-[#22694c] transition-transform duration-300 hover:scale-95">
                 <h1 class="text-2xl font-bold text-[#22694c] dark:text-[#22694c] mb-2"><?php echo htmlspecialchars($user['nombre'] . ' ' . $user['apellidos']); ?></h1>
                 <p class="text-gray-600 dark:text-gray-300"><?php echo htmlspecialchars($user['role']); ?></p>
                 <a href="editprofilead.php"><button class="mt-4 bg-[#22694c] text-white px-4 py-2 rounded-lg hover:bg-[#7ab351] transition-colors duration-300 cursor-pointer">Editar Perfil</button></a>
@@ -85,7 +85,7 @@ $conn->close();
     </div>
 
     <!-- Botón flotante para regresar a la pantalla principal -->
-    <a href="../index.php" class="fixed bottom-6 right-6 bg-[#22694c] text-white p-3 rounded-full shadow-lg hover:bg-[#7ab351] transition duration-300">
+    <a href="index.php" class="fixed bottom-6 right-6 bg-[#22694c] text-white p-3 rounded-full shadow-lg hover:bg-[#7ab351] transition duration-300">
         <svg class="w-6 h-6 text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
             <path stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
         </svg>

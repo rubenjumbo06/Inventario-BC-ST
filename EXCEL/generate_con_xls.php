@@ -12,7 +12,7 @@ $spreadsheet = new Spreadsheet();
 $sheet = $spreadsheet->getActiveSheet();
 
 // Definir encabezados y estilos
-$encabezados = ['ID', 'Nombre', 'Cantidad', 'Empresa', 'Estado', 'Utilidad', 'Ingreso', 'Técnico'];
+$encabezados = ['ID', 'Nombre', 'Cantidad', 'Empresa', 'Estado', 'Utilidad', 'Ingreso', 'Usuario'];
 $columnas = range('A', 'H');
 
 // Aplicar estilos a los encabezados
@@ -40,7 +40,7 @@ while ($row = $result->fetch_assoc()) {
     $sheet->setCellValue('E' . $fila, $row['estado_consumibles']);
     $sheet->setCellValue('F' . $fila, $row['utilidad_consumibles']);
     $sheet->setCellValue('G' . $fila, $row['fecha_ingreso']);
-    $sheet->setCellValue('H' . $fila, $row['id_tecnico']);
+    $sheet->setCellValue('H' . $fila, $row['id_user']);
     $fila++;
 }
 

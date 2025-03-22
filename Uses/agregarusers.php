@@ -31,10 +31,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             // Ejecutar la consulta
             if ($stmt->execute()) {
-                $mensaje = "¡Datos guardados correctamente!";
-
-                // Reinicializar variables para limpiar los campos del formulario
-                $nombre = $apellidos = $username = $password = $role = $correo = $telefono = "";
+                header("Refresh: 1; URL=../pages/Admin/users.php");
+                exit(); 
             } else {
                 $mensaje = "Error al guardar los datos: " . $stmt->error;
             }

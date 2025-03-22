@@ -1,16 +1,19 @@
 <?php
 session_start();
-if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'user') {
+if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'tecnico') {
     header('Location: login.php');
     exit;
 }
+// Recuperar datos de sesión para evitar el error
+$user = $_SESSION['username'] ?? 'Usuario Desconocido'; 
+$role = $_SESSION['role'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Control - Usuario</title>
+    <title>Panel de Control - Técnico</title>
     <style>
         /* Estilos adicionales para el info-box */
         .info-box {
@@ -45,7 +48,7 @@ if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'user') {
 </head>
 <body class="bg-[var(--beige)]">
 
-    <?php include 'pages/header.php'; ?>
+    <?php include '../header.php'; ?>
         <!-- Contenedor Principal -->
 
         <div class="flex justify-between items-center mt-4 px-4">
@@ -60,42 +63,11 @@ if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'user') {
 
     <div class="px-4 sm:px-10 md:px-20 lg:px-60">
         <div class="mt-20 lg:mt-24">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
-                <div class="button-container bg-white p-6 rounded-lg shadow-md flex flex-col justify-center text-center">
-                    <!-- Enlace envolviendo todo el contenido -->
-                    <a href="pages/herramientas.php" class="block w-full h-full text-center cursor-pointer flex flex-col items-center">
-                        <img src="assets/img/herramientas.png" alt="Perfil Usuario" class="w-16 h-16 object-contain mb-4">
-                        <span class="text-[var(--verde-claro)] font-semibold hover:text-[var(--verde-oscuro)] transition">
-                            Herramientas
-                        </span>
-
-                        <!-- Info Box -->
-                        <div id="infoBox1" class="info-box">
-                            <p>Información de las Herramientas existentes en almacen.</p>
-                        </div>
-                    </a>
-
-                </div>
-
+            <div class="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="button-container bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
                     <!-- Enlace envolviendo todo el contenido -->
-                    <a href="pages/activos.php" class="block w-full h-full text-center cursor-pointer flex flex-col items-center">
-                        <img src="assets/img/activos.png" alt="Perfil Usuario" class="w-16 h-16 object-contain mb-4">
-                        <span class="text-[var(--verde-claro)] font-semibold hover:text-[var(--verde-oscuro)] transition">
-                            Activos
-                        </span>
-
-                        <!-- Info Box -->
-                        <div id="infoBox1" class="info-box">
-                            <p>Información de los Activos existentes en almacen.</p>
-                        </div>
-                    </a>
-                </div>
-
-                <div class="button-container bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
-                    <!-- Enlace envolviendo todo el contenido -->
-                    <a href="pages/consumibles.php" class="block w-full h-full text-center cursor-pointer flex flex-col items-center">
-                        <img src="assets/img/consumibles.png" alt="Perfil Usuario" class="w-16 h-16 object-contain mb-4">
+                    <a href="consumibles.php" class="block w-full h-full text-center cursor-pointer flex flex-col items-center">
+                        <img src="../../assets/img/consumibles.png" alt="Consumibles" class="w-16 h-16 object-contain mb-4">
                         <span class="text-[var(--verde-claro)] font-semibold hover:text-[var(--verde-oscuro)] transition">
                             Consumibles
                         </span>
@@ -109,8 +81,23 @@ if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'user') {
 
                 <div class="button-container bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
                     <!-- Enlace envolviendo todo el contenido -->
-                    <a href="pages/perfilus.php" class="block w-full h-full text-center cursor-pointer flex flex-col items-center">
-                        <img src="assets/img/perfil.png" alt="Perfil Usuario" class="w-16 h-16 object-contain mb-4">
+                    <a href="reg_salidas.php" class="block w-full h-full text-center cursor-pointer flex flex-col items-center">
+                        <img src="../../assets/img/salidas.png" alt="Registro de Salidas" class="w-16 h-16 object-contain mb-4">
+                        <span class="text-[var(--verde-claro)] font-semibold hover:text-[var(--verde-oscuro)] transition">
+                            Registro de salidas
+                        </span>
+
+                        <!-- Info Box -->
+                        <div id="infoBox1" class="info-box">
+                            <p>Información de Herramientas, Consumibles y Activos que salieron en una instalación.</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="button-container bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
+                    <!-- Enlace envolviendo todo el contenido -->
+                    <a href="perfiltec.php" class="block w-full h-full text-center cursor-pointer flex flex-col items-center">
+                        <img src="../../assets/img/perfil.png" alt="Perfil Usuario" class="w-16 h-16 object-contain mb-4">
                         <span class="text-[var(--verde-claro)] font-semibold hover:text-[var(--verde-oscuro)] transition">
                             Perfil de Usuario
                         </span>
@@ -118,6 +105,21 @@ if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'user') {
                         <!-- Info Box -->
                         <div id="infoBox1" class="info-box">
                             <p>Información Personal del Usuario.</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="button-container bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
+                    <!-- Enlace envolviendo todo el contenido -->
+                    <a href="reg_entradas.php" class="block w-full h-full text-center cursor-pointer flex flex-col items-center">
+                        <img src="../../assets/img/entradas.png" alt="Registro de Entradas" class="w-16 h-16 object-contain mb-4">
+                        <span class="text-[var(--verde-claro)] font-semibold hover:text-[var(--verde-oscuro)] transition">
+                            Registro de Entradas
+                        </span>
+
+                        <!-- Info Box -->
+                        <div id="infoBox1" class="info-box">
+                            <p>Información de las Herramientas, Consumibles y Activos que regresaron en una instalación.</p>
                         </div>
                     </a>
                 </div>

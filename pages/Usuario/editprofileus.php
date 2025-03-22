@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../conexion.php';
+include '../../conexion.php';
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit();
@@ -102,14 +102,14 @@ $conn->close();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Perfil</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="../assets/CSS/agg.css">
+    <link rel="stylesheet" href="../../assets/CSS/agg.css">
 </head>
 <body class="flex items-center justify-center h-screen bg-gray-100">
     <div class="p-10 rounded-lg shadow-lg">
         <div class="flex flex-wrap gap-5 items-center w-full max-md:max-w-full mb-10">
             <div class="flex flex-wrap flex-1 shrink gap-5 items-center self-stretch my-auto basis-0 min-w-[240px] max-md:max-w-full">
                 <div class="flex relative flex-col justify-center items-center bg-gray-100 h-[70px] w-[70px] rounded-[16px] overflow-hidden">
-                    <img src="../assets/img/p1.jpeg" alt="Editar Listas" class="w-full h-full object-cover">
+                    <img src="../../assets/img/p2.jpeg" alt="Editar Listas" class="w-full h-full object-cover">
                 </div>
                 <div class="flex flex-col self-stretch my-auto min-w-[240px]">
                     <strong>

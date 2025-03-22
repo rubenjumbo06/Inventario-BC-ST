@@ -26,7 +26,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             // Ejecutar la consulta
             if ($stmt->execute()) {
-                $mensaje = "¡Datos guardados correctamente!";
+                header("Refresh: 1; URL=../pages/Admin/utilidad.php");
+                exit(); 
             } else {
                 $mensaje = "Error al guardar los datos: " . $stmt->error;
             }
@@ -87,9 +88,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
  
                 <!-- Descripcion -->
                 <div id="input" class="relative">
-                    <input type="text" id="descripcion" name="descripcion"
-                        class="block w-full text-sm h-[80px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[250px]"
-                        placeholder="Descripcion" value="<?php echo $descripcion; ?>" required />
+                    <textarea id="descripcion" name="descripcion"
+                        class="block w-full text-sm px-4 py-2 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-auto resize-none"
+                        placeholder="Descripcion" required
+                        oninput="autoResize(this)"><?php echo $descripcion; ?></textarea>
                     <label for="descripcion"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Descripcion
@@ -113,5 +115,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
         </form>
     </div>
+
+    <script>
+    function autoResize(textarea) {
+        // Reset the height to auto to recalculate the height
+        textarea.style.height = 'auto';
+        // Set the height to the scrollHeight (content height)
+        textarea.style.height = textarea.scrollHeight + 'px';
+    }
+
+    // Apply auto-resize when the page loads (in case there's pre-filled content)
+    document.addEventListener("DOMContentLoaded", function () {
+        const textarea = document.getElementById('descripcion');
+        autoResize(textarea);
+    });
+    </script>
 </body>
 </html>

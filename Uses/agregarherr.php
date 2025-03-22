@@ -1,6 +1,6 @@
 <?php
 include '../conexion.php';
-
+session_start(); 
 // Inicializar variables del formulario
 $nombre_herramientas = $cantidad_herramientas = $id_empresa = $estado_herramientas = $utilidad_herramientas = $ubicacion_herramientas = "";
 $mensaje = "";
@@ -19,14 +19,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         if ($stmt = $conn->prepare($sql)) {
             $stmt->bind_param("ssiiis", $nombre_herramientas, $cantidad_herramientas, $id_empresa, $estado_herramientas, $utilidad_herramientas, $ubicacion_herramientas);
+            
             if ($stmt->execute()) {
-                $mensaje = "¡Datos guardados correctamente!";
-
-                // Reinicializar variables para limpiar los campos del formulario
-                $nombre_herramientas = $cantidad_herramientas = $id_empresa = $estado_herramientas = $utilidad_herramientas = $ubicacion_herramientas = "";
+                // Verificar el rol del usuario
+                if ($_SESSION['role'] == 'admin') {
+                    header("Location: ../pages/Admin/herramientas.php");
+                } else {
+                    header("Location: ../pages/Usuario/herramientas.php");
+                }
+                exit(); // Asegúrate de salir del script después de la redirección
             } else {
-                $mensaje = "Error al guardar los datos: " . $stmt->error;
+                echo "Error al actualizar la herramienta: " . $stmt->error;
             }
+
             $stmt->close();
         } else {
             $mensaje = "Error al preparar la consulta: " . $conn->error;

@@ -1,6 +1,6 @@
 <?php
 include '../conexion.php';
-
+session_start(); 
 // Inicializar variables del formulario
 $nombre_consumibles = $cantidad_consumibles = $id_empresa = $estado_consumibles = $utilidad_consumibles = $id_user = "";
 $mensaje = "";
@@ -21,14 +21,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         if ($stmt = $conn->prepare($sql)) {
             $stmt->bind_param("ssiiii", $nombre_consumibles, $cantidad_consumibles, $id_empresa, $estado_consumibles, $utilidad_consumibles, $id_user);
+            
             if ($stmt->execute()) {
-                $mensaje = "¡Datos guardados correctamente!";
-
-                 // Reinicializar variables para limpiar los campos del formulario
-                 $nombre_consumibles = $cantidad_consumibles = $id_empresa = $estado_consumibles = $utilidad_consumibles = $id_user = "";
+                // Verificar el rol del usuario
+                if ($_SESSION['role'] == 'admin') {
+                    header("Location: ../pages/Admin/consumibles.php");
+                } else {
+                    header("Location: ../pages/Usuario/consumibles.php");
+                }
+                exit(); // Asegúrate de salir del script después de la redirección
             } else {
-                $mensaje = "Error al guardar los datos: " . $stmt->error;
+                echo "Error al actualizar la herramienta: " . $stmt->error;
             }
+
             $stmt->close();
         } else {
             $mensaje = "Error al preparar la consulta: " . $conn->error;

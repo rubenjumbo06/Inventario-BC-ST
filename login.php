@@ -16,10 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($result->num_rows === 1) {
         $users = $result->fetch_assoc();
-        echo "Hash almacenado: " . $users['password'] . "<br>";
-        echo "Hash generado: " . password_hash($password, PASSWORD_DEFAULT) . "<br>";
-        echo "Resultado de password_verify: " . (password_verify($password, $users['password']) ? 'true' : 'false') . "<br>";
-    
+       
         if (password_verify($password, $users['password'])) {
             session_start();
             $_SESSION['id_user'] = $users['id_user'];
@@ -28,13 +25,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             switch ($users['role']) {
                 case 'admin':
-                    header('Location: index.php');
+                    header('Location: pages/Admin/index.php');
                     exit;
                 case 'user':
-                    header('Location: indexus.php');
+                    header('Location: pages/Usuario/indexus.php');
                     exit;
                 case 'tecnico':
-                    header('Location: indextec.php');
+                    header('Location: pages/Tecnico/indextec.php');
                     exit;
                 default:
                     $error = 'Rol de usuario desconocido.';
@@ -56,6 +53,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Login - Starnet</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../assets/CSS/style.css">
+    <script>
+        // Función para limpiar los campos del formulario
+        function clearForm() {
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        // Limpiar los campos cuando el formulario se envíe
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('loginForm').addEventListener('submit', function() {
+                setTimeout(clearForm, 0);
+            });
+        });
+    </script>
 </head>
 <body class="bg-cover bg-center bg-no-repeat bg-fixed" style="background-image: url('assets/img/fond.jpg');">
     <div class="max-w-[100%] mx-auto">
@@ -72,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <!-- Formulario -->
                 <div class="flex-1 flex flex-col justify-center items-center text-left w-full max-w-[90%] sm:max-w-md mx-auto px-4">
                     <h2 class="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-white text-center">Ingresa a tu cuenta:</h2>
-                    <form class="mt-6 sm:mt-10 space-y-4 sm:space-y-6 w-full" action="#" method="POST">
+                    <form id="loginForm" class="mt-6 sm:mt-10 space-y-4 sm:space-y-6 w-full" action="#" method="POST">
                         <div>
                             <label for="username" class="block text-sm font-medium text-white">Usuario:</label>
                             <input type="text" id="username" name="username" class="w-full px-4 py-2 rounded bg-[#D9D9D9] text-gray-900" required>

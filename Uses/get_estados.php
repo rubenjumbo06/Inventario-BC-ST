@@ -5,8 +5,10 @@ $sql = "SELECT id_estado, nombre_estado FROM tbl_estados";
 $result = $conn->query($sql);
 
 $estados = [];
-while ($row = $result->fetch_assoc()) {
-    $estados[] = $row;
+if ($result->num_rows > 0) {
+    while($row = $result->fetch_assoc()) {
+        $estados[] = $row;
+    }
 }
 
 echo json_encode($estados);

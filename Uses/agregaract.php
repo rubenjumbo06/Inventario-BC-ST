@@ -1,6 +1,6 @@
 <?php
 include '../conexion.php';
-
+session_start(); 
 // Inicializar variables del formulario
 $nombre_activos = $cantidad_activos = $estado_activos = $id_empresa = $IP = $MAC = $SN = $ubicacion_activos = "";
 $mensaje = "";
@@ -11,24 +11,44 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nombre_activos = htmlspecialchars($_POST['nombre_activos']);
     $cantidad_activos = htmlspecialchars($_POST['cantidad_activos']);
     $estado_activos = intval($_POST['estado_activos']);
-    $id_empresa = intval($_POST['id_empresa']); // Guardar ID
+    $id_empresa = intval($_POST['id_empresa']);
     $IP = htmlspecialchars($_POST['IP']);
     $MAC = htmlspecialchars($_POST['MAC']);
     $SN = htmlspecialchars($_POST['SN']);
     $ubicacion_activos = htmlspecialchars($_POST['ubicacion_activos']);
 
+    // Validar longitud de los campos
+    if (strlen($MAC) > 20) {
+        echo "<script>alert('El campo MAC no puede tener más de 20 caracteres.');</script>";
+        exit;
+    }
+    if (strlen($IP) > 20) {
+        echo "<script>alert('El campo IP no puede tener más de 20 caracteres.');</script>";
+        exit;
+    }
+    if (strlen($SN) > 30) {
+        echo "<script>alert('El campo SN no puede tener más de 30 caracteres.');</script>";
+        exit;
+    }
+
+    // Continuar con la inserción si las validaciones pasan
     if (!empty($nombre_activos) && !empty($cantidad_activos) && !empty($estado_activos) && !empty($id_empresa) && !empty($ubicacion_activos)) {
         $sql = "INSERT INTO tbl_activos (nombre_activos, cantidad_activos, estado_activos, id_empresa, IP, MAC, SN, ubicacion_activos) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         if ($stmt = $conn->prepare($sql)) {
             $stmt->bind_param("siisssss", $nombre_activos, $cantidad_activos, $estado_activos, $id_empresa, $IP, $MAC, $SN, $ubicacion_activos);
+            
             if ($stmt->execute()) {
-                $mensaje = "¡Datos guardados correctamente!";
-
-                // Reinicializar variables para limpiar los campos del formulario
-                $nombre_activos = $cantidad_activos = $estado_activos = $id_empresa = $IP = $MAC = $SN = $ubicacion_activos = "";
+                // Verificar el rol del usuario
+                if ($_SESSION['role'] == 'admin') {
+                    header("Location: ../pages/Admin/activos.php");
+                } else {
+                    header("Location: ../pages/Usuario/activos.php");
+                }
+                exit(); // Asegúrate de salir del script después de la redirección
             } else {
-                $mensaje = "Error al guardar los datos: " . $stmt->error;
+                echo "Error al actualizar la herramienta: " . $stmt->error;
             }
+
             $stmt->close();
         } else {
             $mensaje = "Error al preparar la consulta: " . $conn->error;
@@ -119,7 +139,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 <!-- IP -->
                 <div id="input" class="relative">
-                    <input type="text" id="IP" name="IP"
+                    <input type="text" id="IP" name="IP" maxlength="20"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
                         placeholder="IP" value="<?php echo $IP; ?>" />
                     <label for="IP"
@@ -130,7 +150,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 <!-- MAC -->
                 <div id="input" class="relative">
-                    <input type="text" id="MAC" name="MAC"
+                    <input type="text" id="MAC" name="MAC" maxlength="20"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
                         placeholder="MAC" value="<?php echo $MAC; ?>" />
                     <label for="MAC"
@@ -141,7 +161,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 <!-- SN -->
                 <div id="input" class="relative">
-                    <input type="text" id="SN" name="SN"
+                    <input type="text" id="SN" name="SN" maxlength="30"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
                         placeholder="SN" value="<?php echo $SN; ?>" />
                     <label for="SN"
@@ -188,18 +208,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </form>
     </div>
     <script>
-    document.addEventListener("DOMContentLoaded", function () {
-    function cargarDatos(endpoint, selectId) {
-        fetch(endpoint)
-            .then(response => response.json())
-            .then(data => {
+        document.addEventListener("DOMContentLoaded", function () {
+        async function cargarDatos(endpoint, selectId) {
+            try {
+                let response = await fetch(endpoint);
+                if (!response.ok) {
+                    throw new Error(`Error en la solicitud: ${response.statusText}`);
+                }
+                let data = await response.json();
+
+                // Verifica si la respuesta es un array
                 if (!Array.isArray(data)) {
-                    console.error("Error: Respuesta no válida", data);
-                    return;
+                    throw new Error("La respuesta no es un array válido. Respuesta: " + JSON.stringify(data));
                 }
 
                 let select = document.getElementById(selectId);
-                select.innerHTML = '<option value="" disabled selected>Selecciona una Empresa</option>';
+                let placeholderText = "";
+                switch (selectId) {
+                    case "empresa_select":
+                        placeholderText = "Selecciona una Empresa";
+                        break;
+                    case "estado_select":
+                        placeholderText = "Selecciona un Estado";
+                        break;
+                    default:
+                        placeholderText = "Selecciona una opción";
+                }
+                // Limpiar y agregar el texto predeterminado
+                select.innerHTML = `<option value="" disabled selected>${placeholderText}</option>`;
 
                 data.forEach(item => {
                     let option = document.createElement("option");
@@ -207,13 +243,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     option.textContent = item.nombre || item.nombre_estado;
                     select.appendChild(option);
                 });
-            })
-            .catch(error => console.error("Error cargando los datos:", error));
-    }
+            } catch (error) {
+                console.error("Error cargando los datos:", error);
+                alert("Error cargando los datos: " + error.message);
+            }
+        }
 
+        // Cargar los datos de empresas y estados
         cargarDatos("get_empresas.php", "empresa_select");
         cargarDatos("get_estados.php", "estado_select");
-        });
+    });
     </script>
 </body>
 </html>
