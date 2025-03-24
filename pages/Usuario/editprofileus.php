@@ -1,97 +1,107 @@
 <?php
 session_start();
 include '../../conexion.php';
+
+// Verificar si el usuario está autenticado
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit();
 }
-// Obtener datos del usuario autenticado
-$username = $_SESSION['username'];
-$query = "SELECT id_user, nombre, apellidos, username, correo, telefono FROM tbl_users WHERE username = ?";
-$stmt = $conn->prepare($query);
-$stmt->bind_param("s", $username);
-$stmt->execute();
-$result = $stmt->get_result();
-if ($result->num_rows > 0) {
-    $user = $result->fetch_assoc();
-    $id_user = $user['id_user'];
-    $nombre = $user['nombre'];
-    $apellidos = $user['apellidos'];
-    $username = $user['username'];
-    $correo = $user['correo'];
-    $telefono = $user['telefono'];
-} else {
-    $mensaje = "Usuario no encontrado.";
-    header("Location: perfilus.php");
-    exit();
-}
-$stmt->close();
 
+// Habilitar reporte de errores
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $nombre = trim(htmlspecialchars($_POST['nombre']));
-    $apellidos = trim(htmlspecialchars($_POST['apellidos']));
-    $username = trim(htmlspecialchars($_POST['username']));
-    $correo = trim(htmlspecialchars($_POST['correo']));
-    $telefono = trim(htmlspecialchars($_POST['telefono']));
-    $password = $_POST['password'];
+// Obtener el ID del usuario autenticado
+$id_user = $_SESSION['id_user'];
 
-    if (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
-        $mensaje = "El correo electrónico no es válido.";
-    } elseif (!preg_match('/^[0-9]{9}$/', $telefono)) {
-        $mensaje = "El número de teléfono debe tener 9 dígitos.";
-    } elseif (!empty($id_user) && !empty($nombre) && !empty($apellidos) && !empty($username) && !empty($correo) && !empty($telefono)) {
+// Inicializar variables
+$nombre = $apellidos = $username = $correo = $telefono = $rol = '';
+$mensaje = '';
 
+try {
+    // Obtener los datos del usuario de la base de datos
+    $query = "SELECT nombre, apellidos, username, correo, telefono, role FROM tbl_users WHERE id_user = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("i", $id_user);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $user = $result->fetch_assoc();
+        $nombre = $user['nombre'];
+        $apellidos = $user['apellidos'];
+        $username = $user['username'];
+        $correo = $user['correo'];
+        $telefono = $user['telefono'];
+        $rol = $user['role'];
+    } else {
+        throw new Exception("Usuario no encontrado.");
+    }
+
+    // Procesar el formulario cuando se envía
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        $nombre = trim(htmlspecialchars($_POST['nombre']));
+        $apellidos = trim(htmlspecialchars($_POST['apellidos']));
+        $username = trim(htmlspecialchars($_POST['username']));
+        $correo = trim(htmlspecialchars($_POST['correo']));
+        $telefono = trim(htmlspecialchars($_POST['telefono']));
+        $password = $_POST['password'];
+
+        // Validar que los nombres y apellidos solo contengan letras y espacios
+        if (!preg_match('/^[A-Za-z\s]+$/', $nombre)) {
+            throw new Exception("El campo 'Nombres' solo puede contener letras y espacios.");
+        }
+        if (!preg_match('/^[A-Za-z\s]+$/', $apellidos)) {
+            throw new Exception("El campo 'Apellidos' solo puede contener letras y espacios.");
+        }
+
+        // Validar el correo electrónico
+        if (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+            throw new Exception("El correo electrónico no es válido.");
+        }
+
+        // Validar el número de teléfono
+        if (!preg_match('/^[0-9]{9}$/', $telefono)) {
+            throw new Exception("El número de teléfono debe tener 9 dígitos.");
+        }
+
+        // Actualizar los datos del usuario
         if (!empty($password)) {
-
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             $sql = "UPDATE tbl_users SET nombre = ?, apellidos = ?, username = ?, password = ?, correo = ?, telefono = ? WHERE id_user = ?";
             $params = [$nombre, $apellidos, $username, $hashed_password, $correo, $telefono, $id_user];
         } else {
-
             $sql = "UPDATE tbl_users SET nombre = ?, apellidos = ?, username = ?, correo = ?, telefono = ? WHERE id_user = ?";
             $params = [$nombre, $apellidos, $username, $correo, $telefono, $id_user];
         }
 
-
         if ($stmt = $conn->prepare($sql)) {
-
             $types = str_repeat('s', count($params) - 1) . 'i';
             $stmt->bind_param($types, ...$params);
 
             if ($stmt->execute()) {
+                // ACTUALIZAR LAS VARIABLES DE SESIÓN CON LOS NUEVOS DATOS
+                $_SESSION['username'] = $username;
+                $_SESSION['nombre'] = $nombre;
+                $_SESSION['apellidos'] = $apellidos;
+                $_SESSION['correo'] = $correo;
+                $_SESSION['telefono'] = $telefono;
+                
                 $mensaje = "¡Datos actualizados correctamente!";
-                header("Location: perfilus.php"); 
+                header("Location: perfilus.php");
                 exit();
             } else {
-                $mensaje = "Error al actualizar los datos: " . $stmt->error;
+                throw new Exception("Error al actualizar los datos: " . $stmt->error);
             }
-            $stmt->close();
         } else {
-            $mensaje = "Error al preparar la consulta: " . $conn->error;
+            throw new Exception("Error al preparar la consulta: " . $conn->error);
         }
-    } else {
-        $mensaje = "Todos los campos son obligatorios.";
     }
+} catch (Exception $e) {
+    $mensaje = $e->getMessage(); // Capturar el mensaje de error
 }
-// Obtener datos del usuario autenticado
-$username = $_SESSION['username'];
-$query = "SELECT nombre, apellidos, role FROM tbl_users WHERE username = ?";
-$stmt = $conn->prepare($query);
-$stmt->bind_param("s", $username);
-$stmt->execute();
-$result = $stmt->get_result();
-if ($result->num_rows > 0) {
-    $user = $result->fetch_assoc();
-    $nombre = $user['nombre'];
-    $apellidos = $user['apellidos'];
-    $rol = $user['role'];
-} else {
-    $nombre = "Usuario";
-    $apellidos = "Desconocido";
-    $rol = "Sin rol";
-}
-$stmt->close();
+
 $conn->close();
 ?>
 
@@ -122,14 +132,21 @@ $conn->close();
             </div>
         </div>
 
+        <!-- Mostrar mensajes de error o éxito -->
+        <?php if (!empty($mensaje)): ?>
+            <div class="mb-4 p-4 text-sm text-red-700 bg-red-100 rounded-lg">
+                <?php echo htmlspecialchars($mensaje); ?>
+            </div>
+        <?php endif; ?>
+
         <form method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
             <div class="grid grid-cols-2 gap-6 mb-10">
                 <!-- Campo Nombres -->
                 <div id="input" class="relative">
-                    <input type="text" id="floating_outlined" name="nombre"
+                    <input type="text" id="nombre" name="nombre"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
                         placeholder="Nombres" value="<?php echo htmlspecialchars($nombre); ?>" required />
-                    <label for="floating_outlined"
+                    <label for="nombre"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Nombres
                     </label>
@@ -137,10 +154,10 @@ $conn->close();
 
                 <!-- Campo Apellidos -->
                 <div id="input" class="relative">
-                    <input type="text" id="floating_outlined" name="apellidos"
+                    <input type="text" id="apellidos" name="apellidos"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
                         placeholder="Apellidos" value="<?php echo htmlspecialchars($apellidos); ?>" required />
-                    <label for="floating_outlined"
+                    <label for="apellidos"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Apellidos
                     </label>
@@ -190,7 +207,7 @@ $conn->close();
                     </label>
                 </div>
             </div>
-            
+
             <div class="sm:flex sm:flex-row-reverse flex gap-4">
                 <!-- Botón Guardar -->
                 <button type="submit"

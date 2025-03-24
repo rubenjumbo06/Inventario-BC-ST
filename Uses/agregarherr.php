@@ -139,9 +139,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <option value="" disabled selected>Selecciona una Ubicación</option>
                         <option value="1">En Campo</option>
                         <option value="2">En Almacén</option>
-                        <option value="2">En Oficina</option>
-                        <option value="2">En Instalación</option>
-                        <option value="2">Instalado</option>
                     </select>
                     <label
                         for="floating_outlined"

@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bind_param($types, ...$params);
 
     if ($stmt->execute()) {
-        echo "<script>window.location.href='../pages/tecnico.php';</script>";
+        echo "<script>window.location.href='../pages/Admin/tecnico.php';</script>";
     } else {
         echo "<script>alert('Error al actualizar el técnico');</script>";
         echo $stmt->error;

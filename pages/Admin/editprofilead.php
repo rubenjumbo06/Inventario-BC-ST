@@ -81,13 +81,19 @@ try {
             $stmt->bind_param($types, ...$params);
 
             if ($stmt->execute()) {
+                // ACTUALIZAR LAS VARIABLES DE SESIÓN CON LOS NUEVOS DATOS
+                $_SESSION['username'] = $username;
+                $_SESSION['nombre'] = $nombre;
+                $_SESSION['apellidos'] = $apellidos;
+                $_SESSION['correo'] = $correo;
+                $_SESSION['telefono'] = $telefono;
+                
                 $mensaje = "¡Datos actualizados correctamente!";
                 header("Location: perfilad.php");
                 exit();
             } else {
                 throw new Exception("Error al actualizar los datos: " . $stmt->error);
             }
-            $stmt->close();
         } else {
             throw new Exception("Error al preparar la consulta: " . $conn->error);
         }

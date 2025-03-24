@@ -1,45 +1,67 @@
 <?php
 include '../conexion.php';
-session_start(); 
+session_start();
+
+// Función para redirección basada en rol
+function redirectBasedOnRole() {
+    if (isset($_SESSION['role'])) {
+        $role = $_SESSION['role'];
+        $page = ($role == 'admin') ? '../pages/Admin/consumibles.php' : 
+                (($role == 'user') ? '../pages/Usuario/consumibles.php' : 
+                '../pages/Tecnico/consumibles.php');
+        header("Location: " . $page);
+        exit();
+    }
+    // Redirección por defecto si no hay rol
+    header("Location: ../pages/consumibles.php");
+    exit();
+}
+
 // Inicializar variables del formulario
 $nombre_consumibles = $cantidad_consumibles = $id_empresa = $estado_consumibles = $utilidad_consumibles = $id_user = "";
 $mensaje = "";
 
 // Procesar el formulario cuando se envíe
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Recoger los datos del formulario y sanitizar
-    $nombre_consumibles = htmlspecialchars($_POST['nombre_consumibles']);
-    $cantidad_consumibles = htmlspecialchars($_POST['cantidad_consumibles']);
-    $id_empresa = intval($_POST['id_empresa']);
-    $estado_consumibles = intval($_POST['estado_consumibles']); 
-    $utilidad_consumibles = intval($_POST['utilidad_consumibles']); 
-    $id_user = intval($_POST['id_user']);
+    try {
+        // Recoger los datos del formulario y sanitizar
+        $nombre_consumibles = htmlspecialchars($_POST['nombre_consumibles']);
+        $cantidad_consumibles = htmlspecialchars($_POST['cantidad_consumibles']);
+        $id_empresa = intval($_POST['id_empresa']);
+        $estado_consumibles = intval($_POST['estado_consumibles']); 
+        $utilidad_consumibles = intval($_POST['utilidad_consumibles']); 
+        $id_user = intval($_POST['id_user']);
 
+        // Validar campos obligatorios
+        if (empty($nombre_consumibles) || empty($cantidad_consumibles) || empty($id_empresa) || 
+            empty($estado_consumibles) || empty($utilidad_consumibles) || empty($id_user)) {
+            throw new Exception("Todos los campos son obligatorios.");
+        }
 
-    if (!empty($nombre_consumibles) && !empty($cantidad_consumibles) && !empty($id_empresa) && !empty($estado_consumibles) && !empty($utilidad_consumibles) && !empty($id_user)) {
+        // Preparar y ejecutar la consulta
         $sql = "INSERT INTO tbl_consumibles (nombre_consumibles, cantidad_consumibles, id_empresa, estado_consumibles, utilidad_consumibles, id_user) VALUES (?, ?, ?, ?, ?, ?)";
         
-        if ($stmt = $conn->prepare($sql)) {
-            $stmt->bind_param("ssiiii", $nombre_consumibles, $cantidad_consumibles, $id_empresa, $estado_consumibles, $utilidad_consumibles, $id_user);
-            
-            if ($stmt->execute()) {
-                // Verificar el rol del usuario
-                if ($_SESSION['role'] == 'admin') {
-                    header("Location: ../pages/Admin/consumibles.php");
-                } else {
-                    header("Location: ../pages/Usuario/consumibles.php");
-                }
-                exit(); // Asegúrate de salir del script después de la redirección
-            } else {
-                echo "Error al actualizar la herramienta: " . $stmt->error;
-            }
-
-            $stmt->close();
-        } else {
-            $mensaje = "Error al preparar la consulta: " . $conn->error;
+        if (!$stmt = $conn->prepare($sql)) {
+            throw new Exception("Error al preparar la consulta: " . $conn->error);
         }
-    } else {
-        $mensaje = "Todos los campos son obligatorios.";
+
+        if (!$stmt->bind_param("ssiiii", $nombre_consumibles, $cantidad_consumibles, $id_empresa, $estado_consumibles, $utilidad_consumibles, $id_user)) {
+            throw new Exception("Error al vincular parámetros: " . $stmt->error);
+        }
+
+        if (!$stmt->execute()) {
+            throw new Exception("Error al ejecutar la consulta: " . $stmt->error);
+        }
+
+        // Redireccionar según el rol
+        redirectBasedOnRole();
+
+    } catch (Exception $e) {
+        $mensaje = $e->getMessage();
+    } finally {
+        if (isset($stmt)) {
+            $stmt->close();
+        }
     }
 }
 ?>
@@ -168,52 +190,53 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
     <script>
     document.addEventListener("DOMContentLoaded", function () {
-    function cargarDatos(endpoint, selectId) {
-        fetch(endpoint)
-            .then(response => response.json())
-            .then(data => {
+        async function cargarDatos(endpoint, selectId) {
+            try {
+                const response = await fetch(endpoint);
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                const data = await response.json();
+                
                 if (!Array.isArray(data)) {
-                    console.error("Error: Respuesta no válida", data);
-                    return;
+                    throw new Error("Respuesta no válida del servidor");
                 }
 
-                let select = document.getElementById(selectId);
-                // Determinar el texto predeterminado según el campo
+                const select = document.getElementById(selectId);
                 let placeholderText = "";
+                
                 switch (selectId) {
-                    case "empresa_select":
-                        placeholderText = "Selecciona una Empresa";
-                        break;
-                    case "estado_select":
-                        placeholderText = "Selecciona un Estado";
-                        break;
-                    case "utilidad_select":
-                        placeholderText = "Selecciona una Utilidad";
-                        break;
-                    case "users_select":
-                        placeholderText = "Selecciona un Usuario";
-                        break;
-                    default:
-                        placeholderText = "Selecciona una opción";
+                    case "empresa_select": placeholderText = "Selecciona una Empresa"; break;
+                    case "estado_select": placeholderText = "Selecciona un Estado"; break;
+                    case "utilidad_select": placeholderText = "Selecciona una Utilidad"; break;
+                    case "users_select": placeholderText = "Selecciona un Usuario"; break;
+                    default: placeholderText = "Selecciona una opción";
                 }
-                // Limpiar y agregar el texto predeterminado
+
                 select.innerHTML = `<option value="" disabled selected>${placeholderText}</option>`;
 
                 data.forEach(item => {
-                    let option = document.createElement("option");
+                    const option = document.createElement("option");
                     option.value = item.id_empresa || item.id_estado || item.id_utilidad || item.id_user;
                     option.textContent = item.nombre || item.nombre_estado || item.nombre_utilidad || item.username;
                     select.appendChild(option);
                 });
-            })
-            .catch(error => console.error("Error cargando los datos:", error));
-    }
+            } catch (error) {
+                console.error("Error cargando los datos:", error);
+                // Opcional: Mostrar mensaje de error al usuario
+            }
+        }
 
-        cargarDatos("get_empresas.php", "empresa_select");
-        cargarDatos("get_estados.php", "estado_select");
-        cargarDatos("get_utilidades.php", "utilidad_select");
-        cargarDatos("get_users.php", "users_select");
+        // Cargar datos iniciales
+        Promise.all([
+            cargarDatos("get_empresas.php", "empresa_select"),
+            cargarDatos("get_estados.php", "estado_select"),
+            cargarDatos("get_utilidades.php", "utilidad_select"),
+            cargarDatos("get_users.php", "users_select")
+        ]).catch(error => {
+            console.error("Error al cargar datos iniciales:", error);
         });
+    });
     </script>
 </body>
 </html>

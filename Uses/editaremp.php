@@ -1,81 +1,138 @@
 <?php
 require_once("../conexion.php");
+session_start();
 
-if ($conn->connect_error) {
-    die("Error de conexión: " . $conn->connect_error);
-}
+// Iniciar buffer de salida
+ob_start();
 
-if (isset($_GET['id_empresa']) && is_numeric($_GET['id_empresa'])) {
+try {
+    // Verificar la conexión a la base de datos
+    if ($conn->connect_error) {
+        throw new Exception("Error de conexión a la base de datos");
+    }
+
+    // Validar ID de la empresa
+    if (!isset($_GET['id_empresa']) || !is_numeric($_GET['id_empresa'])) {
+        throw new Exception("ID de empresa no proporcionado o inválido");
+    }
+
     $id_empresa = intval($_GET['id_empresa']);
+    
+    // Obtener datos de la empresa
     $sql = "SELECT * FROM tbl_empresa WHERE id_empresa = ?";
     $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        throw new Exception("Error al preparar la consulta: " . $conn->error);
+    }
+    
     $stmt->bind_param("i", $id_empresa);
-    $stmt->execute();
+    if (!$stmt->execute()) {
+        throw new Exception("Error al ejecutar la consulta: " . $stmt->error);
+    }
+    
     $result = $stmt->get_result();
     $empresa = $result->fetch_assoc();
 
     if (!$empresa) {
-        die("Empresa no encontrada.");
+        throw new Exception("Empresa no encontrada");
     }
 
-    // Inicializar $servicio_empresa con el valor de la base de datos
+    // Inicializar variables para la vista
+    $nombre = $empresa['nombre'] ?? '';
+    $ruc = $empresa['ruc'] ?? '';
     $servicio_empresa = $empresa['servicio_empresa'] ?? '';
-} else {
-    die("ID inválido.");
+
+    // Procesar formulario POST
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        try {
+            // Validar y sanitizar datos
+            $nombre = isset($_POST['nombre']) ? trim($_POST['nombre']) : '';
+            $ruc = isset($_POST['ruc']) ? trim($_POST['ruc']) : '';
+            $servicio_empresa = isset($_POST['servicio_empresa']) ? trim($_POST['servicio_empresa']) : '';
+
+            // Validaciones básicas
+            if (empty($nombre)) {
+                throw new Exception("El nombre de la empresa es requerido");
+            }
+
+            if (empty($ruc)) {
+                throw new Exception("El RUC de la empresa es requerido");
+            }
+
+            // Construir consulta SQL dinámica
+            $sql = "UPDATE tbl_empresa SET ";
+            $params = [];
+            $types = "";
+            $updates = [];
+
+            if (!empty($nombre)) {
+                $updates[] = "nombre = ?";
+                $params[] = $nombre;
+                $types .= "s";
+            }
+            
+            if (!empty($ruc)) {
+                $updates[] = "ruc = ?";
+                $params[] = $ruc;
+                $types .= "s";
+            }
+            
+            if (!empty($servicio_empresa)) {
+                $updates[] = "servicio_empresa = ?";
+                $params[] = $servicio_empresa;
+                $types .= "s";
+            }
+
+            // Si no hay campos para actualizar
+            if (empty($updates)) {
+                $_SESSION['message'] = 'No se realizaron cambios';
+                // Limpiar buffer y redirigir
+                ob_end_clean();
+                header("Location: ../pages/Admin/empresa.php");
+                exit();
+            }
+
+            $sql .= implode(", ", $updates);
+            $sql .= " WHERE id_empresa = ?";
+            $params[] = $id_empresa;
+            $types .= "i";
+
+            // Ejecutar consulta
+            $stmt = $conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception("Error al preparar la consulta de actualización: " . $conn->error);
+            }
+            
+            $stmt->bind_param($types, ...$params);
+            
+            if ($stmt->execute()) {
+                $_SESSION['success'] = 'Empresa actualizada correctamente';
+                // Limpiar buffer y redirigir
+                ob_end_clean();
+                header("Location: ../pages/Admin/empresa.php");
+                exit();
+            } else {
+                throw new Exception("Error al actualizar la empresa: " . $stmt->error);
+            }
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            // Limpiar buffer y redirigir
+            ob_end_clean();
+            header("Location: " . $_SERVER['HTTP_REFERER']);
+            exit();
+        }
+    }
+
+} catch (Exception $e) {
+    $_SESSION['error'] = $e->getMessage();
+    // Limpiar buffer y redirigir
+    ob_end_clean();
+    header("Location: ../pages/error.php");
+    exit();
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    var_dump($_POST); 
-
-    $nombre = $_POST['nombre'] ?? null;
-    $ruc = $_POST['ruc'] ?? null;
-    $servicio_empresa = $_POST['servicio_empresa'] ?? null;
-
-    // Construir la consulta SQL dinámicamente
-    $sql = "UPDATE tbl_empresa SET ";
-    $params = [];
-    $types = "";
-
-    if (!empty($nombre)) {
-        $sql .= "nombre=?, ";
-        $params[] = $nombre;
-        $types .= "s";
-    }
-    if (!empty($ruc)) {
-        $sql .= "ruc=?, ";
-        $params[] = $ruc;
-        $types .= "s";
-    }
-    if (!empty($servicio_empresa)) {
-        $sql .= "servicio_empresa=?, ";
-        $params[] = $servicio_empresa;
-        $types .= "s"; // Cambia "i" por "s" para manejar el campo como string
-    }
-    
-    if (empty($params)) {
-        echo "<script>alert('No se realizaron cambios'); window.location.href='../pages/Admin/empresa.php';</script>";
-        exit();
-    }
-
-    // Eliminar la última coma y espacio
-    $sql = rtrim($sql, ", ");
-
-    // Agregar la condición WHERE
-    $sql .= " WHERE id_empresa=?";
-    $params[] = $id_empresa;
-    $types .= "i";
-
-    // Preparar y ejecutar la consulta
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param($types, ...$params);
-
-    if ($stmt->execute()) {
-        echo "<script>window.location.href='../pages/Admin/empresa.php';</script>";
-    } else {
-        echo "<script>alert('Error al actualizar la empresa');</script>";
-        echo $stmt->error;
-    }
-}
+// Limpiar buffer antes de mostrar el HTML
+ob_end_flush();
 ?>
 
 <!DOCTYPE html>
@@ -84,7 +141,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Datos</title>
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../assets/CSS/agg.css">
 </head>
@@ -107,9 +163,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="grid grid-cols-2 gap-6 mb-10">
                 <!-- Nombre -->
                 <div id="input" class="relative">
-                    <input type="text" id="nombre" name="nombre" value="<?= htmlspecialchars($empresa['nombre']) ?>"
+                    <input type="text" id="nombre" name="nombre" value="<?= htmlspecialchars($nombre) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Nombre"/>
+                        placeholder="Nombre" required/>
                     <label for="nombre"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Nombre
@@ -118,9 +174,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <!-- RUC -->
                 <div id="input" class="relative">
-                    <input type="number" id="ruc" name="ruc" value="<?= htmlspecialchars($empresa['ruc']) ?>"
+                    <input type="number" id="ruc" name="ruc" value="<?= htmlspecialchars($ruc) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="RUC"/>
+                        placeholder="RUC" required/>
                     <label for="ruc"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         RUC
@@ -132,7 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <textarea id="servicio_empresa" name="servicio_empresa"
                         class="block w-full text-sm px-4 py-2 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-auto resize-none"
                         placeholder="Servicio" required
-                        oninput="autoResize(this)"><?php echo htmlspecialchars($servicio_empresa); ?></textarea>
+                        oninput="autoResize(this)"><?= htmlspecialchars($servicio_empresa) ?></textarea>
                     <label for="servicio_empresa"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Servicio
@@ -157,14 +213,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
     <script>
     function autoResize(textarea) {
-        // Reset the height to auto to recalculate the height
         textarea.style.height = 'auto';
-        // Set the height to the scrollHeight (content height)
         textarea.style.height = textarea.scrollHeight + 'px';
     }
 
-    // Apply auto-resize when the page loads (in case there's pre-filled content)
-    document.addEventListener("DOMContentLoaded", function () {
+    // Aplicar auto-resize al cargar la página
+    document.addEventListener("DOMContentLoaded", function() {
         const textarea = document.getElementById('servicio_empresa');
         autoResize(textarea);
     });

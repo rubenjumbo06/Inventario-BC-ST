@@ -35,7 +35,7 @@ $pdf->SetFillColor(50, 168, 82);
 $pdf->SetTextColor(255);
 
 // Ancho total de la tabla (sin la columna de contraseñas)
-$tableWidth = 10 + 20 + 25 + 20 + 15 + 40 + 25 + 40 + 40;
+$tableWidth = 10 + 20 + 25 + 20 + 15 + 50 + 25 + 40 + 40;
 $pageWidth = $pdf->GetPageWidth();
 $startX = ($pageWidth - $tableWidth) / 2;
 $pdf->SetX($startX);
@@ -46,7 +46,7 @@ $pdf->Cell(20, 10, 'Nombre', 1, 0, 'C', true);
 $pdf->Cell(25, 10, 'Apellidos', 1, 0, 'C', true);
 $pdf->Cell(20, 10, 'Usuario', 1, 0, 'C', true);
 $pdf->Cell(15, 10, 'Rol', 1, 0, 'C', true);
-$pdf->Cell(40, 10, 'Correo', 1, 0, 'C', true);
+$pdf->Cell(50, 10, 'Correo', 1, 0, 'C', true);
 $pdf->Cell(25, 10, 'Telefono', 1, 0, 'C', true);
 $pdf->Cell(40, 10, 'Creacion', 1, 0, 'C', true);
 $pdf->Cell(40, 10, 'Modificacion', 1, 1, 'C', true);
@@ -64,7 +64,7 @@ while ($row = $result->fetch_assoc()) {
     $pdf->Cell(25, 10, utf8_decode($row['apellidos']), 1, 0, 'C');
     $pdf->Cell(20, 10, $row['username'], 1, 0, 'C');
     $pdf->Cell(15, 10, $row['role'], 1, 0, 'C');
-    $pdf->Cell(40, 10, $row['correo'], 1, 0, 'C');
+    $pdf->Cell(50, 10, $row['correo'], 1, 0, 'C');
     $pdf->Cell(25, 10, $row['telefono'], 1, 0, 'C');
     $pdf->Cell(40, 10, $row['fecha_creacion'], 1, 0, 'C');
     $pdf->Cell(40, 10, $row['fecha_modificacion'], 1, 1, 'C');

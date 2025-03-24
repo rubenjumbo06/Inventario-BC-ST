@@ -1,22 +1,43 @@
 <?php
 require_once("../conexion.php");
-session_start(); 
-// Verificar la conexión
-if ($conn->connect_error) {
-    die("Error de conexión: " . $conn->connect_error);
-}
+session_start();
 
-if (isset($_GET['id_consumibles']) && is_numeric($_GET['id_consumibles'])) {
-    $id_consumibles = intval($_GET['id_consumibles']);
+// Desactivar cualquier salida automática
+ob_start();
+
+try {
+    // Verificar la conexión a la base de datos
+    if ($conn->connect_error) {
+        throw new Exception("Error de conexión a la base de datos");
+    }
+
+    // Validar ID del consumible
+    if (!isset($_GET['id_consumibles'])) {
+        throw new Exception("ID de consumible no proporcionado");
+    }
+    
+    $id_consumibles = filter_var($_GET['id_consumibles'], FILTER_VALIDATE_INT);
+    if ($id_consumibles === false) {
+        throw new Exception("ID de consumible inválido");
+    }
+
+    // Obtener datos del consumible
     $sql = "SELECT * FROM tbl_consumibles WHERE id_consumibles = ?";
     $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        throw new Exception("Error al preparar la consulta: " . $conn->error);
+    }
+    
     $stmt->bind_param("i", $id_consumibles);
-    $stmt->execute();
+    if (!$stmt->execute()) {
+        throw new Exception("Error al ejecutar la consulta: " . $stmt->error);
+    }
+    
     $result = $stmt->get_result();
     $consumible = $result->fetch_assoc();
 
     if (!$consumible) {
-        die("Consumible no encontrado.");
+        throw new Exception("Consumible no encontrado");
     }
 
     // Pasar los valores a la vista
@@ -24,91 +45,128 @@ if (isset($_GET['id_consumibles']) && is_numeric($_GET['id_consumibles'])) {
     $estado_consumibles_selected = $consumible['estado_consumibles'];
     $utilidad_consumibles_selected = $consumible['utilidad_consumibles'];
     $id_user_selected = $consumible['id_user'];
-} else {
-    die("ID inválido.");
+
+    // Procesar formulario POST
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        try {
+            // Validar y sanitizar datos
+            $nombre_consumibles = isset($_POST['nombre_consumibles']) ? trim($_POST['nombre_consumibles']) : '';
+            $cantidad_consumibles = isset($_POST['cantidad_consumibles']) ? intval($_POST['cantidad_consumibles']) : 0;
+            $id_empresa = isset($_POST['id_empresa']) ? intval($_POST['id_empresa']) : 0;
+            $estado_consumibles = isset($_POST['estado_consumibles']) ? intval($_POST['estado_consumibles']) : 0;
+            $utilidad_consumibles = isset($_POST['utilidad_consumibles']) ? trim($_POST['utilidad_consumibles']) : '';
+            $id_user = isset($_POST['id_user']) ? intval($_POST['id_user']) : 0;
+
+            // Validaciones básicas
+            if (empty($nombre_consumibles)) {
+                throw new Exception("El nombre del consumible es requerido");
+            }
+
+            // Construir consulta SQL dinámica
+            $sql = "UPDATE tbl_consumibles SET ";
+            $params = [];
+            $types = "";
+            $updates = [];
+
+            if (!empty($nombre_consumibles)) {
+                $updates[] = "nombre_consumibles = ?";
+                $params[] = $nombre_consumibles;
+                $types .= "s";
+            }
+            
+            if ($cantidad_consumibles > 0) {
+                $updates[] = "cantidad_consumibles = ?";
+                $params[] = $cantidad_consumibles;
+                $types .= "i";
+            }
+            
+            if ($id_empresa > 0) {
+                $updates[] = "id_empresa = ?";
+                $params[] = $id_empresa;
+                $types .= "i";
+            }
+            
+            if ($estado_consumibles > 0) {
+                $updates[] = "estado_consumibles = ?";
+                $params[] = $estado_consumibles;
+                $types .= "i";
+            }
+            
+            if (!empty($utilidad_consumibles)) {
+                $updates[] = "utilidad_consumibles = ?";
+                $params[] = $utilidad_consumibles;
+                $types .= "s";
+            }
+            
+            if ($id_user > 0) {
+                $updates[] = "id_user = ?";
+                $params[] = $id_user;
+                $types .= "i";
+            }
+
+            // Si no hay campos para actualizar
+            if (empty($updates)) {
+                $_SESSION['message'] = 'No se realizaron cambios';
+                // Limpiar buffer y redirigir
+                ob_end_clean();
+                redirectBasedOnRole();
+            }
+
+            $sql .= implode(", ", $updates);
+            $sql .= " WHERE id_consumibles = ?";
+            $params[] = $id_consumibles;
+            $types .= "i";
+
+            // Ejecutar consulta
+            $stmt = $conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception("Error al preparar la consulta de actualización: " . $conn->error);
+            }
+            
+            $stmt->bind_param($types, ...$params);
+            
+            if ($stmt->execute()) {
+                $_SESSION['success'] = 'Consumible actualizado correctamente';
+                // Limpiar buffer y redirigir
+                ob_end_clean();
+                redirectBasedOnRole();
+            } else {
+                throw new Exception("Error al actualizar el consumible: " . $stmt->error);
+            }
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            // Limpiar buffer y redirigir
+            ob_end_clean();
+            header("Location: " . $_SERVER['HTTP_REFERER']);
+            exit();
+        }
+    }
+
+} catch (Exception $e) {
+    $_SESSION['error'] = $e->getMessage();
+    // Limpiar buffer y redirigir
+    ob_end_clean();
+    header("Location: ../pages/error.php");
+    exit();
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    var_dump($_POST); // Verificar los datos del formulario
-
-    // Obtener los valores del formulario
-    $nombre_consumibles = $_POST['nombre_consumibles'] ?? null;
-    $cantidad_consumibles = $_POST['cantidad_consumibles'] ?? null;
-    $id_empresa = $_POST['id_empresa'] ?? null;
-    $estado_consumibles = $_POST['estado_consumibles'] ?? null;
-    $utilidad_consumibles = $_POST['utilidad_consumibles'] ?? null;
-    $id_user = $_POST['id_user'] ?? null;
-
-    // Construir la consulta SQL dinámicamente
-    $sql = "UPDATE tbl_consumibles SET ";
-    $params = [];
-    $types = "";
-
-    if (!empty($nombre_consumibles)) {
-        $sql .= "nombre_consumibles=?, ";
-        $params[] = $nombre_consumibles;
-        $types .= "s";
-    }
-    if (!empty($cantidad_consumibles)) {
-        $sql .= "cantidad_consumibles=?, ";
-        $params[] = $cantidad_consumibles;
-        $types .= "i";
-    }
-    if (!empty($id_empresa)) {
-        $sql .= "id_empresa=?, ";
-        $params[] = $id_empresa;
-        $types .= "i"; // Cambia a "i" si id_empresa es un entero
-    }
-    if (!empty($estado_consumibles)) {
-        $sql .= "estado_consumibles=?, ";
-        $params[] = $estado_consumibles;
-        $types .= "i";
-    }
-    if (!empty($utilidad_consumibles)) {
-        $sql .= "utilidad_consumibles=?, ";
-        $params[] = $utilidad_consumibles;
-        $types .= "s";
-    }
-    if (!empty($id_user)) {
-        $sql .= "id_user=?, ";
-        $params[] = $id_user;
-        $types .= "i"; // Cambia a "i" si id_user es un entero
-    }
-
-    // Si no hay campos para actualizar, redirigir sin hacer cambios
-    if (empty($params)) {
-        echo "<script>alert('No se realizaron cambios'); window.location.href='../pages/consumibles.php';</script>";
+// Función para redirección basada en rol
+function redirectBasedOnRole() {
+    if (isset($_SESSION['role'])) {
+        $role = $_SESSION['role'];
+        $page = ($role == 'admin') ? '../pages/Admin/consumibles.php' : 
+                (($role == 'user') ? '../pages/Usuario/consumibles.php' : 
+                '../pages/Tecnico/consumibles.php');
+        header("Location: " . $page);
         exit();
     }
-
-    // Eliminar la última coma y espacio
-    $sql = rtrim($sql, ", ");
-
-    $sql .= " WHERE id_consumibles=?";
-    $params[] = $id_consumibles;
-    $types .= "i";
-
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param($types, ...$params);
-
-    if ($stmt->execute()) {
-
-        if ($_SESSION['role'] == 'admin') {
-            // Redirigir a la página de activos del administrador
-            echo "<script>window.location.href='../pages/Admin/consumibles.php';</script>";
-        } else if ($_SESSION['role'] == 'user') {
-            // Redirigir a la página de activos del usuario
-            echo "<script>window.location.href='../pages/Usuario/consumibles.php';</script>";
-        }else{
-            // Redirigir a la página de activos del usuario
-            echo "<script>window.location.href='../pages/Tecnico/consumibles.php';</script>";
-        }
-    } else {
-        // Mostrar un mensaje de error si la ejecución falla
-        echo "<script>alert('Error al actualizar el activo');</script>";
-        echo $stmt->error; // Mostrar errores en la ejecución de la consulta
-    }
+    // Redirección por defecto si no hay rol
+    header("Location: ../pages/consumibles.php");
+    exit();
 }
+
+// Limpiar buffer antes de mostrar el HTML
+ob_end_flush();
 ?>
 
 <!DOCTYPE html>
@@ -116,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agregar Datos</title>
+    <title>Editar Datos</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../assets/CSS/agg.css">

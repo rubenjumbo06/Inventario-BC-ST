@@ -104,6 +104,7 @@ try {
 } catch (Exception $e) {
     echo "<script>alert('" . addslashes($e->getMessage()) . "');</script>";
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -189,13 +190,15 @@ try {
 
                 <!-- Ubicación -->
                 <div id="input" class="relative">
+                    <?php
+                    // Normalizar el valor para comparación
+                    $ubicacion_actual = strtolower(trim($herramienta['ubicacion_herramientas']));
+                    ?>
                     <select name="ubicacion_herramientas" id="ubicacion_select"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-hidden pr-[48px]">
-                        <option value="" disabled selected>Selecciona una Ubicación</option>
-                        <option value="En instalacion" <?= $herramienta['ubicacion_herramientas'] === 'En instalacion' ? 'selected' : '' ?>>En instalación</option>
-                        <option value="En oficina" <?= $herramienta['ubicacion_herramientas'] === 'En oficina' ? 'selected' : '' ?>>En oficina</option>
-                        <option value="En almacen" <?= $herramienta['ubicacion_herramientas'] === 'En almacen' ? 'selected' : '' ?>>En almacén</option>
-                        <option value="Instalado" <?= $herramienta['ubicacion_herramientas'] === 'Instalado' ? 'selected' : '' ?>>Instalado</option>
+                        <option value="" disabled>Selecciona una Ubicación</option>
+                        <option value="En almacen" <?= ($ubicacion_actual === 'en almacen') ? 'selected' : '' ?>>En almacen</option>
+                        <option value="En Campo" <?= ($ubicacion_actual === 'en campo') ? 'selected' : '' ?>>En Campo</option>
                     </select>
                     <label for="ubicacion_herramientas"
                         class="absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
@@ -279,7 +282,6 @@ try {
         cargarDatos("get_empresas.php", "empresa_select", id_empresa_selected);
         cargarDatos("get_estados.php", "estado_select", estado_herramientas_selected);
         cargarDatos("get_utilidades.php", "utilidad_select", utilidad_herramientas_selected);
-        cargarDatos("get_ubicacion.php", "ubicacion_select", ubicacion_herramientas_selected);
     });
     </script>
 </body>

@@ -1,38 +1,69 @@
 <?php
 include '../conexion.php';
+session_start();
+
+// Iniciar buffer de salida
+ob_start();
 
 // Inicializar variables del formulario
 $nombre = $ruc = $servicio_empresa = "";
-$mensaje = "";
 
-// Procesar el formulario cuando se envíe
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Recoger los datos del formulario y sanitizar
-    $nombre = htmlspecialchars($_POST['nombre']);
-    $ruc = htmlspecialchars($_POST['ruc']);
-    $servicio_empresa = htmlspecialchars($_POST['servicio_empresa']);
+try {
+    // Verificar la conexión a la base de datos
+    if ($conn->connect_error) {
+        throw new Exception("Error de conexión a la base de datos");
+    }
 
-    if (!empty($nombre) && !empty($ruc) && !empty($servicio_empresa)) {
+    // Procesar el formulario cuando se envíe
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        // Validar y sanitizar datos
+        $nombre = isset($_POST['nombre']) ? trim(htmlspecialchars($_POST['nombre'])) : '';
+        $ruc = isset($_POST['ruc']) ? trim(htmlspecialchars($_POST['ruc'])) : '';
+        $servicio_empresa = isset($_POST['servicio_empresa']) ? trim(htmlspecialchars($_POST['servicio_empresa'])) : '';
+
+        // Validar campos obligatorios
+        if (empty($nombre)) {
+            throw new Exception("El nombre de la empresa es requerido");
+        }
+        
+        if (empty($ruc)) {
+            throw new Exception("El RUC de la empresa es requerido");
+        }
+        
+        if (empty($servicio_empresa)) {
+            throw new Exception("El servicio de la empresa es requerido");
+        }
+
+        // Preparar consulta SQL
         $sql = "INSERT INTO tbl_empresa (nombre, ruc, servicio_empresa) VALUES (?, ?, ?)";
         
-        if ($stmt = $conn->prepare($sql)) {
-            $stmt->bind_param("sss", $nombre, $ruc, $servicio_empresa);
-            if ($stmt->execute()) {
-
-                header("Refresh: 1; URL=../pages/Admin/empresa.php");
-                exit(); 
-                
-            } else {
-                $mensaje = "Error al guardar los datos: " . $stmt->error;
-            }
-            $stmt->close();
-        } else {
-            $mensaje = "Error al preparar la consulta: " . $conn->error;
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            throw new Exception("Error al preparar la consulta: " . $conn->error);
         }
-    } else {
-        $mensaje = "Todos los campos son obligatorios.";
+        
+        $stmt->bind_param("sss", $nombre, $ruc, $servicio_empresa);
+        
+        if ($stmt->execute()) {
+            $_SESSION['success'] = 'Empresa agregada correctamente';
+            // Limpiar buffer y redirigir inmediatamente
+            ob_end_clean();
+            header("Location: ../pages/Admin/empresa.php");
+            exit();
+        } else {
+            throw new Exception("Error al guardar los datos: " . $stmt->error);
+        }
     }
+} catch (Exception $e) {
+    $_SESSION['error'] = $e->getMessage();
+    // Limpiar buffer y redirigir
+    ob_end_clean();
+    header("Location: " . $_SERVER['HTTP_REFERER']);
+    exit();
 }
+
+// Limpiar buffer antes de mostrar el HTML
+ob_end_flush();
 ?>
 
 <!DOCTYPE html>
@@ -41,7 +72,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agregar Datos</title>
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../assets/CSS/agg.css">
 </head>
@@ -60,19 +90,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
         </div>
 
-        <?php if (!empty($mensaje)): ?>
-            <div class="mb-10 text-green-500"><?php echo $mensaje; ?></div>
-        <?php endif; ?>
-
-        
-        <form action="agregaremp.php" method="POST">
-
+        <form method="POST">
             <div class="grid grid-cols-2 gap-6 mb-10">
                 <!-- Nombre -->
                 <div id="input" class="relative">
-                    <input type="text" id="nombre" name="nombre"
+                    <input type="text" id="nombre" name="nombre" value="<?= htmlspecialchars($nombre) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Nombre" value="<?php echo $nombre; ?>" required />
+                        placeholder="Nombre" required />
                     <label for="nombre"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Nombre
@@ -81,10 +105,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
  
                 <!-- RUC -->
                 <div id="input" class="relative">
-                    <input type="text" id="ruc" name="ruc"
+                    <input type="text" id="ruc" name="ruc" value="<?= htmlspecialchars($ruc) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="RUC" value="<?php echo $ruc; ?>" required />
-                    <label for="RUC"
+                        placeholder="RUC" required />
+                    <label for="ruc"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         RUC
                     </label>
@@ -95,14 +119,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <textarea id="servicio_empresa" name="servicio_empresa"
                         class="block w-full text-sm px-4 py-2 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-auto resize-none"
                         placeholder="Servicio" required
-                        oninput="autoResize(this)"><?php echo $servicio_empresa; ?></textarea>
+                        oninput="autoResize(this)"><?= htmlspecialchars($servicio_empresa) ?></textarea>
                     <label for="servicio_empresa"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Servicio
                     </label>
                 </div>
-
-
             </div>
 
             <div class="sm:flex sm:flex-row-reverse flex gap-4">
@@ -124,15 +146,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <script>
     function autoResize(textarea) {
-        // Reset the height to auto to recalculate the height
         textarea.style.height = 'auto';
-        // Set the height to the scrollHeight (content height)
         textarea.style.height = textarea.scrollHeight + 'px';
     }
 
-    // Apply auto-resize when the page loads (in case there's pre-filled content)
-    document.addEventListener("DOMContentLoaded", function () {
-        const textarea = document.getElementById('descripcion');
+    // Aplicar auto-resize cuando se carga la página
+    document.addEventListener("DOMContentLoaded", function() {
+        const textarea = document.getElementById('servicio_empresa');
         autoResize(textarea);
     });
     </script>

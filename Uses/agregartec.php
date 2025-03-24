@@ -1,48 +1,74 @@
 <?php
 include '../conexion.php';
+session_start();
+
+// Iniciar buffer de salida
+ob_start();
 
 // Inicializar variables del formulario
 $nombre_tecnico = $dni_tecnico = $edad_tecnico = $num_telef = "";
-$mensaje = "";
 
-// Procesar el formulario cuando se envíe
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Recoger los datos del formulario y sanitizar
-    $nombre_tecnico = htmlspecialchars($_POST['nombre_tecnico']);
-    $dni_tecnico = htmlspecialchars($_POST['dni_tecnico']);
-    $edad_tecnico = htmlspecialchars($_POST['edad_tecnico']);
-    $num_telef = htmlspecialchars($_POST['num_telef']);
-
-    // Validar que los campos no estén vacíos
-    if (!empty($nombre_tecnico) && !empty($dni_tecnico) && !empty($edad_tecnico) && !empty($num_telef)) {
-        // Nombre fijo de la tabla
-        $tabla = "tbl_tecnico";
-
-        // Preparar la consulta SQL para insertar datos
-        $sql = "INSERT INTO $tabla (nombre_tecnico, dni_tecnico, edad_tecnico, num_telef) VALUES (?, ?, ?, ?)";
-
-        // Preparar la sentencia
-        if ($stmt = $conn->prepare($sql)) {
-            // Enlazar los parámetros
-            $stmt->bind_param("ssss", $nombre_tecnico, $dni_tecnico, $edad_tecnico, $num_telef);
-
-            // Ejecutar la consulta
-            if ($stmt->execute()) {
-                header("Refresh: 1; URL=../pages/Admin/tecnico.php");
-                exit(); 
-            } else {
-                $mensaje = "Error al guardar los datos: " . $stmt->error;
-            }
-
-            // Cerrar la sentencia
-            $stmt->close();
-        } else {
-            $mensaje = "Error al preparar la consulta: " . $conn->error;
-        }
-    } else {
-        $mensaje = "Todos los campos son obligatorios.";
+try {
+    // Verificar la conexión a la base de datos
+    if ($conn->connect_error) {
+        throw new Exception("Error de conexión a la base de datos");
     }
+
+    // Procesar el formulario cuando se envíe
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        // Validar y sanitizar datos
+        $nombre_tecnico = isset($_POST['nombre_tecnico']) ? trim(htmlspecialchars($_POST['nombre_tecnico'])) : '';
+        $dni_tecnico = isset($_POST['dni_tecnico']) ? trim(htmlspecialchars($_POST['dni_tecnico'])) : '';
+        $edad_tecnico = isset($_POST['edad_tecnico']) ? trim(htmlspecialchars($_POST['edad_tecnico'])) : '';
+        $num_telef = isset($_POST['num_telef']) ? trim(htmlspecialchars($_POST['num_telef'])) : '';
+
+        // Validar campos obligatorios
+        if (empty($nombre_tecnico)) {
+            throw new Exception("El nombre del técnico es requerido");
+        }
+        
+        if (empty($dni_tecnico)) {
+            throw new Exception("El DNI es requerido");
+        }
+        
+        if (empty($edad_tecnico)) {
+            throw new Exception("La edad es requerida");
+        }
+        
+        if (empty($num_telef)) {
+            throw new Exception("El número de teléfono es requerido");
+        }
+
+        // Preparar consulta SQL
+        $sql = "INSERT INTO tbl_tecnico (nombre_tecnico, dni_tecnico, edad_tecnico, num_telef) VALUES (?, ?, ?, ?)";
+        
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            throw new Exception("Error al preparar la consulta: " . $conn->error);
+        }
+        
+        $stmt->bind_param("ssss", $nombre_tecnico, $dni_tecnico, $edad_tecnico, $num_telef);
+        
+        if ($stmt->execute()) {
+            $_SESSION['success'] = 'Técnico agregado correctamente';
+            // Limpiar buffer y redirigir inmediatamente
+            ob_end_clean();
+            header("Location: ../pages/Admin/tecnico.php");
+            exit();
+        } else {
+            throw new Exception("Error al guardar los datos: " . $stmt->error);
+        }
+    }
+} catch (Exception $e) {
+    $_SESSION['error'] = $e->getMessage();
+    // Limpiar buffer y redirigir
+    ob_end_clean();
+    header("Location: " . $_SERVER['HTTP_REFERER']);
+    exit();
 }
+
+// Limpiar buffer antes de mostrar el HTML
+ob_end_flush();
 ?>
 
 <!DOCTYPE html>
@@ -51,7 +77,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agregar Datos</title>
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../assets/CSS/agg.css">
 </head>
@@ -70,19 +95,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
         </div>
 
-        <?php if (!empty($mensaje)): ?>
-            <div class="mb-10 text-green-500"><?php echo $mensaje; ?></div>
+        <?php if (isset($_SESSION['error'])): ?>
+            <div class="mb-10 text-red-500"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></div>
         <?php endif; ?>
 
-        <form method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
-
+        <form method="post">
             <div class="grid grid-cols-2 gap-6 mb-10">
                 <!-- Nombre -->
                 <div id="input" class="relative">
-                    <input type="text" id="nombre_tecnico" name="nombre_tecnico"
+                    <input type="text" id="nombre_tecnico" name="nombre_tecnico" value="<?= htmlspecialchars($nombre_tecnico) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Nombre" value="<?php echo $nombre_tecnico; ?>" required />
-                    <label for="nombre"
+                        placeholder="Nombre" required />
+                    <label for="nombre_tecnico"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Nombre
                     </label>
@@ -90,10 +114,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
  
                 <!-- DNI -->
                 <div id="input" class="relative">
-                    <input type="text" id="dni_tecnico" name="dni_tecnico"
+                    <input type="text" id="dni_tecnico" name="dni_tecnico" value="<?= htmlspecialchars($dni_tecnico) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="DNI" value="<?php echo $dni_tecnico; ?>" required />
-                    <label for="DNI"
+                        placeholder="DNI" required />
+                    <label for="dni_tecnico"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         DNI
                     </label>
@@ -101,20 +125,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 <!-- Edad -->
                 <div id="input" class="relative">
-                    <input type="text" id="edad_tecnico" name="edad_tecnico"
+                    <input type="number" id="edad_tecnico" name="edad_tecnico" value="<?= htmlspecialchars($edad_tecnico) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Edad" value="<?php echo $edad_tecnico; ?>" required />
+                        placeholder="Edad" required min="18" max="99" />
                     <label for="edad_tecnico"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Edad
                     </label>
                 </div>
 
-                <!-- Numero -->
+                <!-- Número de Teléfono -->
                 <div id="input" class="relative">
-                    <input type="text" id="num_telef" name="num_telef"
+                    <input type="tel" id="num_telef" name="num_telef" value="<?= htmlspecialchars($num_telef) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Número de Teléfono" value="<?php echo $num_telef; ?>" required />
+                        placeholder="Número de Teléfono" required pattern="[0-9]{9,15}" />
                     <label for="num_telef"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Número de Teléfono

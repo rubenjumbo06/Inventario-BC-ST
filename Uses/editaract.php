@@ -5,6 +5,7 @@ if (!isset($_SESSION['id_user'])) {
     header('Location: login.php');
     exit;
 }
+
 try {
     // Verificar la conexión
     if ($conn->connect_error) {
@@ -30,7 +31,7 @@ try {
         // Pasar los valores a la vista
         $id_empresa_selected = $activo['id_empresa'];
         $estado_activos_selected = $activo['estado_activos'];
-        $ubicacion_activos_selected = $activo['ubicacion_activos']; // Valor de ubicación
+        $ubicacion_activos_selected = $activo['ubicacion_activos'];
     } else {
         throw new Exception("ID inválido.");
     }
@@ -45,6 +46,17 @@ try {
         $MAC = $_POST['MAC'] ?? null;
         $SN = $_POST['SN'] ?? null;
         $ubicacion_activos = $_POST['ubicacion_activos'] ?? null;
+
+        // Validación de longitud de campos
+        if (strlen($MAC) > 20) {
+            throw new Exception("La dirección MAC no puede exceder los 20 caracteres.");
+        }
+        if (strlen($IP) > 20) {
+            throw new Exception("La dirección IP no puede exceder los 20 caracteres.");
+        }
+        if (strlen($SN) > 30) {
+            throw new Exception("El número de serie (SN) no puede exceder los 30 caracteres.");
+        }
 
         // Construir la consulta SQL dinámicamente
         $sql = "UPDATE tbl_activos SET ";
@@ -105,12 +117,9 @@ try {
         $stmt->bind_param($types, ...$params);
 
         if ($stmt->execute()) {
-            // Verificar el rol del usuario
             if ($_SESSION['role'] == 'admin') {
-                // Redirigir a la página de activos del administrador
                 echo "<script>window.location.href='../pages/Admin/activos.php';</script>";
             } else {
-                // Redirigir a la página de activos del usuario
                 echo "<script>window.location.href='../pages/Usuario/activos.php';</script>";
             }
         } else {
@@ -130,10 +139,20 @@ try {
     <title>Editar Activo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../assets/CSS/agg.css">
+    <script>
+        function limitarLongitud(input, maxLength) {
+            if (input.value.length > maxLength) {
+                alert(`No puedes escribir más de ${maxLength} caracteres`);
+                input.value = input.value.substring(0, maxLength);
+                return false;
+            }
+            return true;
+        }
+    </script>
 </head>
 <body class="flex items-center justify-center h-screen bg-gray-100">
     <div class="p-10 rounded-lg shadow-lg">
-        <form method="POST">
+    <form method="POST" onsubmit="return validarLongitudes()">
             <div class="grid grid-cols-2 gap-6 mb-10">
                 <!-- Nombre -->
                 <div id="input" class="relative">
@@ -187,10 +206,11 @@ try {
                 <div id="input" class="relative">
                     <input type="text" id="IP" name="IP" value="<?= htmlspecialchars($activo['IP']) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="IP"/>
+                        placeholder="IP" maxlength="20"
+                        oninput="return limitarLongitud(this, 20)"/>
                     <label for="IP"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
-                        IP
+                        IP (max 20 caracteres)
                     </label>
                 </div>
 
@@ -198,10 +218,11 @@ try {
                 <div id="input" class="relative">
                     <input type="text" id="MAC" name="MAC" value="<?= htmlspecialchars($activo['MAC']) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="MAC"/>
+                        placeholder="MAC" maxlength="20"
+                        oninput="return limitarLongitud(this, 20)"/>
                     <label for="MAC"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
-                        MAC
+                        MAC (max 20 caracteres)
                     </label>
                 </div>
 
@@ -209,10 +230,11 @@ try {
                 <div id="input" class="relative">
                     <input type="text" id="SN" name="SN" value="<?= htmlspecialchars($activo['SN']) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="SN"/>
+                        placeholder="SN" maxlength="30"
+                        oninput="return limitarLongitud(this, 30)"/>
                     <label for="SN"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
-                        SN
+                        SN (max 30 caracteres)
                     </label>
                 </div>
 
@@ -248,6 +270,40 @@ try {
     </div>
 
     <script>
+        // Función para limitar la longitud de los campos
+        function limitarLongitud(input, maxLength) {
+                    if (input.value.length > maxLength) {
+                        alert(`No puedes escribir más de ${maxLength} caracteres en este campo`);
+                        input.value = input.value.substring(0, maxLength);
+                        return false;
+                    }
+                    return true;
+        }
+
+        // Función para validar longitudes antes de enviar el formulario
+        function validarLongitudes() {
+            const mac = document.getElementById('MAC');
+            const ip = document.getElementById('IP');
+            const sn = document.getElementById('SN');
+            
+            if (mac.value.length > 20) {
+                alert('La dirección MAC no puede exceder los 20 caracteres');
+                return false;
+            }
+            
+            if (ip.value.length > 20) {
+                alert('La dirección IP no puede exceder los 20 caracteres');
+                return false;
+            }
+            
+            if (sn.value.length > 30) {
+                alert('El número de serie (SN) no puede exceder los 30 caracteres');
+                return false;
+            }
+            
+            return true;
+        }
+
         document.addEventListener("DOMContentLoaded", function () {
         async function cargarDatos(endpoint, selectId, selectedValue) {
             try {

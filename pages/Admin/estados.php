@@ -17,7 +17,7 @@ $result = $conn->query($sql);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventario de Activos</title>
+    <title>Inventario de Estados</title>
     <link rel="stylesheet" href="../../assets/CSS/tables.css">
     <style>
         .sidebar {

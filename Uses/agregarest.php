@@ -1,46 +1,64 @@
 <?php
 include '../conexion.php';
+session_start();
+
+// Iniciar buffer de salida
+ob_start();
 
 // Inicializar variables del formulario
 $nombre_estado = $descripcion = "";
-$mensaje = "";
 
-// Procesar el formulario cuando se envíe
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Recoger los datos del formulario y sanitizar
-    $nombre_estado = htmlspecialchars($_POST['nombre_estado']);
-    $descripcion = htmlspecialchars($_POST['descripcion']);
-
-    // Validar que los campos no estén vacíos
-    if (!empty($nombre_estado) && !empty($descripcion)) {
-        // Nombre fijo de la tabla
-        $tabla = "tbl_estados";
-
-        // Preparar la consulta SQL para insertar datos
-        $sql = "INSERT INTO $tabla (nombre_estado, descripcion) VALUES (?, ?)";
-
-        // Preparar la sentencia
-        if ($stmt = $conn->prepare($sql)) {
-            // Enlazar los parámetros
-            $stmt->bind_param("ss", $nombre_estado, $descripcion);
-
-            // Ejecutar la consulta
-            if ($stmt->execute()) {
-                header("Refresh: 1; URL=../pages/Admin/estados.php");
-                exit(); 
-            } else {
-                $mensaje = "Error al guardar los datos: " . $stmt->error;
-            }
-
-            // Cerrar la sentencia
-            $stmt->close();
-        } else {
-            $mensaje = "Error al preparar la consulta: " . $conn->error;
-        }
-    } else {
-        $mensaje = "Todos los campos son obligatorios.";
+try {
+    // Verificar la conexión a la base de datos
+    if ($conn->connect_error) {
+        throw new Exception("Error de conexión a la base de datos");
     }
+
+    // Procesar el formulario cuando se envíe
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        // Validar y sanitizar datos
+        $nombre_estado = isset($_POST['nombre_estado']) ? trim(htmlspecialchars($_POST['nombre_estado'])) : '';
+        $descripcion = isset($_POST['descripcion']) ? trim(htmlspecialchars($_POST['descripcion'])) : '';
+
+        // Validar campos obligatorios
+        if (empty($nombre_estado)) {
+            throw new Exception("El nombre del estado es requerido");
+        }
+        
+        if (empty($descripcion)) {
+            throw new Exception("La descripción es requerida");
+        }
+
+        // Preparar consulta SQL
+        $sql = "INSERT INTO tbl_estados (nombre_estado, descripcion) VALUES (?, ?)";
+        
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            throw new Exception("Error al preparar la consulta: " . $conn->error);
+        }
+        
+        $stmt->bind_param("ss", $nombre_estado, $descripcion);
+        
+        if ($stmt->execute()) {
+            $_SESSION['success'] = 'Estado agregado correctamente';
+            // Limpiar buffer y redirigir inmediatamente
+            ob_end_clean();
+            header("Location: ../pages/Admin/estados.php");
+            exit();
+        } else {
+            throw new Exception("Error al guardar los datos: " . $stmt->error);
+        }
+    }
+} catch (Exception $e) {
+    $_SESSION['error'] = $e->getMessage();
+    // Limpiar buffer y redirigir
+    ob_end_clean();
+    header("Location: " . $_SERVER['HTTP_REFERER']);
+    exit();
 }
+
+// Limpiar buffer antes de mostrar el HTML
+ob_end_flush();
 ?>
 
 <!DOCTYPE html>
@@ -49,7 +67,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agregar Datos</title>
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../assets/CSS/agg.css">
 </head>
@@ -68,19 +85,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
         </div>
 
-        <?php if (!empty($mensaje)): ?>
-            <div class="mb-10 text-green-500"><?php echo $mensaje; ?></div>
+        <?php if (isset($_SESSION['error'])): ?>
+            <div class="mb-10 text-red-500"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></div>
         <?php endif; ?>
 
-        <form method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
-
+        <form method="post">
             <div class="grid grid-cols-1 gap-6 mb-10">
                 <!-- Nombre -->
                 <div id="input" class="relative">
-                    <input type="text" id="nombre_estado" name="nombre_estado"
+                    <input type="text" id="nombre_estado" name="nombre_estado" value="<?= htmlspecialchars($nombre_estado) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Nombre" value="<?php echo $nombre_estado; ?>" required />
-                    <label for="nombre"
+                        placeholder="Nombre" required />
+                    <label for="nombre_estado"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Nombre
                     </label>
@@ -90,11 +106,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <div id="input" class="relative">
                     <textarea id="descripcion" name="descripcion"
                         class="block w-full text-sm px-4 py-2 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-auto resize-none"
-                        placeholder="Descripcion" required
-                        oninput="autoResize(this)"><?php echo $descripcion; ?></textarea>
+                        placeholder="Descripción" required
+                        oninput="autoResize(this)"><?= htmlspecialchars($descripcion) ?></textarea>
                     <label for="descripcion"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
-                        Descripcion
+                        Descripción
                     </label>
                 </div>
             </div>
@@ -117,14 +133,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
     <script>
     function autoResize(textarea) {
-        // Reset the height to auto to recalculate the height
         textarea.style.height = 'auto';
-        // Set the height to the scrollHeight (content height)
         textarea.style.height = textarea.scrollHeight + 'px';
     }
 
-    // Apply auto-resize when the page loads (in case there's pre-filled content)
-    document.addEventListener("DOMContentLoaded", function () {
+    // Apply auto-resize when the page loads
+    document.addEventListener("DOMContentLoaded", function() {
         const textarea = document.getElementById('descripcion');
         autoResize(textarea);
     });

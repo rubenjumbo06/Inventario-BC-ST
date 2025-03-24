@@ -7,38 +7,42 @@ $mensaje = "";
 
 // Procesar el formulario cuando se envíe
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Recoger los datos del formulario y sanitizar
-    $nombre_utilidad = htmlspecialchars($_POST['nombre_utilidad']);
-    $descripcion = htmlspecialchars($_POST['descripcion']);
+    try {
+        // Recoger los datos del formulario y sanitizar
+        $nombre_utilidad = htmlspecialchars($_POST['nombre_utilidad']);
+        $descripcion = htmlspecialchars($_POST['descripcion']);
 
-    // Validar que los campos no estén vacíos
-    if (!empty($nombre_utilidad) && !empty($descripcion)) {
+        // Validar que los campos no estén vacíos
+        if (empty($nombre_utilidad) || empty($descripcion)) {
+            throw new Exception("Todos los campos son obligatorios.");
+        }
+
         // Nombre fijo de la tabla
         $tabla = "tbl_utilidad";
 
         // Preparar la consulta SQL para insertar datos
         $sql = "INSERT INTO $tabla (nombre_utilidad, descripcion) VALUES (?, ?)";
-
+        
         // Preparar la sentencia
-        if ($stmt = $conn->prepare($sql)) {
-            // Enlazar los parámetros
-            $stmt->bind_param("ss", $nombre_utilidad, $descripcion);
-
-            // Ejecutar la consulta
-            if ($stmt->execute()) {
-                header("Refresh: 1; URL=../pages/Admin/utilidad.php");
-                exit(); 
-            } else {
-                $mensaje = "Error al guardar los datos: " . $stmt->error;
-            }
-
-            // Cerrar la sentencia
-            $stmt->close();
-        } else {
-            $mensaje = "Error al preparar la consulta: " . $conn->error;
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            throw new Exception("Error al preparar la consulta: " . $conn->error);
         }
-    } else {
-        $mensaje = "Todos los campos son obligatorios.";
+
+        // Enlazar los parámetros
+        $stmt->bind_param("ss", $nombre_utilidad, $descripcion);
+
+        // Ejecutar la consulta
+        if (!$stmt->execute()) {
+            throw new Exception("Error al guardar los datos: " . $stmt->error);
+        }
+
+        // Cerrar la sentencia y redirigir sin espera
+        $stmt->close();
+        header("Location: ../pages/Admin/utilidad.php");
+        exit(); 
+    } catch (Exception $e) {
+        $mensaje = $e->getMessage();
     }
 }
 ?>

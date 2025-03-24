@@ -15,8 +15,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $IP = htmlspecialchars($_POST['IP']);
     $MAC = htmlspecialchars($_POST['MAC']);
     $SN = htmlspecialchars($_POST['SN']);
-    $ubicacion_activos = htmlspecialchars($_POST['ubicacion_activos']);
+    $ubicacion_activos = intval($_POST['ubicacion_activos']);
 
+    // Validar ubicación primero
+    if ($ubicacion_activos < 1 || $ubicacion_activos > 5) {
+        echo "<script>alert('Ubicación no válida.');</script>";
+        exit;
+    }
+    $ubicaciones_validas = [1, 2, 3, 4, 5]; // Estos deben coincidir con los índices del ENUM
+    if (!in_array($ubicacion_activos, $ubicaciones_validas)) {
+        echo "<script>alert('Ubicación no válida.');</script>";
+        exit;
+    }
     // Validar longitud de los campos
     if (strlen($MAC) > 20) {
         echo "<script>alert('El campo MAC no puede tener más de 20 caracteres.');</script>";
@@ -35,7 +45,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (!empty($nombre_activos) && !empty($cantidad_activos) && !empty($estado_activos) && !empty($id_empresa) && !empty($ubicacion_activos)) {
         $sql = "INSERT INTO tbl_activos (nombre_activos, cantidad_activos, estado_activos, id_empresa, IP, MAC, SN, ubicacion_activos) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         if ($stmt = $conn->prepare($sql)) {
-            $stmt->bind_param("siisssss", $nombre_activos, $cantidad_activos, $estado_activos, $id_empresa, $IP, $MAC, $SN, $ubicacion_activos);
+            $stmt->bind_param("siissssi", $nombre_activos, $cantidad_activos, $estado_activos, 
+                             $id_empresa, $IP, $MAC, $SN, $ubicacion_activos);
             
             if ($stmt->execute()) {
                 // Verificar el rol del usuario
@@ -170,24 +181,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </label>
                 </div>
 
-                <!-- Ubicacion -->
+               <!-- Ubicacion -->
                 <div id="input" class="relative">
-                    <select id="floating_outlined" name="ubicacion_activos"
-                        class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-hidden pr-[48px]">
+                    <select name="ubicacion_activos" id="ubicacion_select"
+                        class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-hidden pr-[48px]" 
+                        required>
                         <option value="" disabled selected>Selecciona una Ubicación</option>
-                        <option value="1">En Campo</option>
-                        <option value="2">En Almacén</option>
-                        <option value="3">En Oficina</option>
-                        <option value="4">En Instalación</option>
-                        <option value="5">Instalado</option>
                     </select>
-                    <label
-                        for="floating_outlined"
+                    <label for="ubicacion_select"
                         class="absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
                         Ubicación
                     </label>
                 </div>
-
             </div>
 
             <div class="sm:flex sm:flex-row-reverse flex gap-4">
@@ -208,50 +213,47 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </form>
     </div>
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-        async function cargarDatos(endpoint, selectId) {
+    document.addEventListener("DOMContentLoaded", function() {
+        async function cargarDatos(endpoint, selectId, placeholder, isUbicacion = false) {
             try {
-                let response = await fetch(endpoint);
-                if (!response.ok) {
-                    throw new Error(`Error en la solicitud: ${response.statusText}`);
+                const response = await fetch(endpoint);
+                if (!response.ok) throw new Error('Error en la respuesta del servidor');
+                
+                const data = await response.json();
+                
+                const select = document.getElementById(selectId);
+                select.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
+                
+                if (isUbicacion) {
+                    // Manejo especial para ubicaciones (array simple)
+                    data.forEach((item, index) => {
+                        const option = document.createElement("option");
+                        option.value = index + 1; // Asignamos IDs numéricos
+                        option.textContent = item;
+                        select.appendChild(option);
+                    });
+                } else {
+                    // Manejo normal para otros endpoints (objetos con id y nombre)
+                    if (!Array.isArray(data)) throw new Error('Datos no válidos');
+                    
+                    data.forEach(item => {
+                        const option = document.createElement("option");
+                        option.value = item.id || item.id_empresa || item.id_estado;
+                        option.textContent = item.nombre || item.nombre_estado || item.nombre_empresa;
+                        select.appendChild(option);
+                    });
                 }
-                let data = await response.json();
-
-                // Verifica si la respuesta es un array
-                if (!Array.isArray(data)) {
-                    throw new Error("La respuesta no es un array válido. Respuesta: " + JSON.stringify(data));
-                }
-
-                let select = document.getElementById(selectId);
-                let placeholderText = "";
-                switch (selectId) {
-                    case "empresa_select":
-                        placeholderText = "Selecciona una Empresa";
-                        break;
-                    case "estado_select":
-                        placeholderText = "Selecciona un Estado";
-                        break;
-                    default:
-                        placeholderText = "Selecciona una opción";
-                }
-                // Limpiar y agregar el texto predeterminado
-                select.innerHTML = `<option value="" disabled selected>${placeholderText}</option>`;
-
-                data.forEach(item => {
-                    let option = document.createElement("option");
-                    option.value = item.id_empresa || item.id_estado;
-                    option.textContent = item.nombre || item.nombre_estado;
-                    select.appendChild(option);
-                });
             } catch (error) {
-                console.error("Error cargando los datos:", error);
-                alert("Error cargando los datos: " + error.message);
+                console.error(`Error cargando ${selectId}:`, error);
+                document.getElementById(selectId).innerHTML = 
+                    `<option value="" disabled selected>Error cargando datos</option>`;
             }
         }
 
-        // Cargar los datos de empresas y estados
-        cargarDatos("get_empresas.php", "empresa_select");
-        cargarDatos("get_estados.php", "estado_select");
+        // Cargar datos
+        cargarDatos("get_empresas.php", "empresa_select", "Selecciona una Empresa");
+        cargarDatos("get_estados.php", "estado_select", "Selecciona un Estado");
+        cargarDatos("get_ubicacion.php", "ubicacion_select", "Selecciona una Ubicación", true);
     });
     </script>
 </body>
