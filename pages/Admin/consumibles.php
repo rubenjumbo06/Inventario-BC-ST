@@ -1,7 +1,7 @@
 <?php
 session_start();
-if ($_SESSION['role'] !== 'admin') {
-    header('Location: login.php'); // Redirige si no es admin
+if (!isset($_SESSION['id_user'])) {
+    header('Location: login.php');
     exit;
 }
 $role = $_SESSION['role'];
