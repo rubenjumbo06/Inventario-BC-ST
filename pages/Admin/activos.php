@@ -85,6 +85,28 @@ $result = $conn->query($sql);
             margin-top: 20px; /* Margen superior */
         }
     </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            function actualizarFechaHora() {
+                const ahora = new Date();
+                const fechaHoraFormateada = ahora.toLocaleString('es-ES', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+                const fechaHoraElemento = document.getElementById("fechaHora");
+                if (fechaHoraElemento) {
+                    fechaHoraElemento.textContent = `Fecha/Hora Ingreso: ${fechaHoraFormateada}`;
+                }
+            }
+            actualizarFechaHora();
+            setInterval(actualizarFechaHora, 1000);
+        });
+    </script>
 </head>
 <body class="bg-[var(--beige)]">
 <?php include '../header.php'; ?>

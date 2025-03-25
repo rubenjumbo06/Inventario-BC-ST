@@ -36,21 +36,21 @@ $pdf->SetFillColor(50, 168, 82);
 $pdf->SetTextColor(255);
 
 // Ancho total de la tabla
-$tableWidth = 10 + 30 + 10 + 10 + 10 + 25 + 40 + 25 + 35 + 40;
+$tableWidth = 10 + 35 + 10 + 10 + 10 + 30 + 40 + 25 + 30 + 40;
 $pageWidth = $pdf->GetPageWidth();
 $startX = ($pageWidth - $tableWidth) / 2;
 $pdf->SetX($startX);
 
 // Encabezado
 $pdf->Cell(10, 10, 'ID', 1, 0, 'C', true);
-$pdf->Cell(30, 10, 'Nombre', 1, 0, 'C', true);
+$pdf->Cell(40, 10, 'Nombre', 1, 0, 'C', true);
 $pdf->Cell(10, 10, 'Cant.', 1, 0, 'C', true);
 $pdf->Cell(10, 10, 'Est.', 1, 0, 'C', true);
 $pdf->Cell(10, 10, 'Emp.', 1, 0, 'C', true);
-$pdf->Cell(25, 10, 'IP', 1, 0, 'C', true);
+$pdf->Cell(30, 10, 'IP', 1, 0, 'C', true);
 $pdf->Cell(40, 10, 'MAC', 1, 0, 'C', true);
 $pdf->Cell(25, 10, 'SN', 1, 0, 'C', true);
-$pdf->Cell(35, 10, 'Ubicacion', 1, 0, 'C', true);
+$pdf->Cell(30, 10, 'Ubicacion', 1, 0, 'C', true);
 $pdf->Cell(40, 10, 'Ingreso', 1, 1, 'C', true);
 
 $pdf->SetFont('Arial', '', 10);
@@ -63,14 +63,14 @@ $result = $conn->query($sql);
 while ($row = $result->fetch_assoc()) {
     $pdf->SetX($startX);
     $pdf->Cell(10, 10, $row['id_activos'], 1, 0, 'C');
-    $pdf->Cell(30, 10, utf8_decode($row['nombre_activos']), 1, 0, 'C');
+    $pdf->Cell(40, 10, utf8_decode($row['nombre_activos']), 1, 0, 'C');
     $pdf->Cell(10, 10, $row['cantidad_activos'], 1, 0, 'C');
     $pdf->Cell(10, 10, $row['estado_activos'], 1, 0, 'C');
     $pdf->Cell(10, 10, $row['id_empresa'], 1, 0, 'C');
-    $pdf->Cell(25, 10, $row['IP'], 1, 0, 'C');
+    $pdf->Cell(30, 10, $row['IP'], 1, 0, 'C');
     $pdf->Cell(40, 10, $row['MAC'], 1, 0, 'C');
     $pdf->Cell(25, 10, $row['SN'], 1, 0, 'C');
-    $pdf->Cell(35, 10, $row['ubicacion_activos'], 1, 0, 'C');
+    $pdf->Cell(30, 10, utf8_decode($row['ubicacion_activos']), 1, 0, 'C');
     $pdf->Cell(40, 10, $row['fecha_ingreso'], 1, 1, 'C');
 }
 
