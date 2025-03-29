@@ -47,10 +47,24 @@ $result = $conn->query($sql);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             z-index: 1000; 
         }
+        #addBtn {
+            background-color: rgb(3, 70, 141);
+            color: white !important;
+            border: none;
+            padding: 8px 15px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
 
+        #addBtn:hover {
+            background-color:rgb(3, 24, 46);
+        }
+        /* Estilos para el botón de Excel */
         .excelBtn {
-            background-color: #1f6f42; 
-            color: white;
+            background-color: #28a745 ;
+            color: white !important;
             border: none;
             padding: 8px 15px;
             cursor: pointer;
@@ -60,12 +74,13 @@ $result = $conn->query($sql);
         }
 
         .excelBtn:hover {
-            background-color: #185732;
+            background-color: #185732; /* Verde más oscuro al pasar el mouse */
         }
 
+        /* Estilos para el botón de PDF */
         .pdfBtn {
-            background-color: #d9534f;
-            color: white;
+            background-color: #dc3545;
+            color: white !important;
             border: none;
             padding: 8px 15px;
             cursor: pointer;
@@ -75,9 +90,8 @@ $result = $conn->query($sql);
         }
 
         .pdfBtn:hover {
-            background-color: #c9302c;
+            background-color:rgb(167, 35, 31); /* Rojo más oscuro al pasar el mouse */
         }
-
         .button-container {
             display: flex; 
             justify-content: center; 
@@ -105,7 +119,22 @@ $result = $conn->query($sql);
         <strong>
         <h1 class="title text-shadow">Tabla de Usuarios</h1>    
         </strong>
+        <div class="button-container">
+            <!-- Botón Agregar -->
+            <a href="../../Uses/agregarusers.php">
+                <button id="addBtn">Agregar Nuevo</button>
+            </a>
 
+            <!-- Botón Excel -->
+            <a href="../../EXCEL/generate_users_xls.php">
+                <button class="excelBtn">Descargar Excel</button>
+            </a>
+
+            <!-- Botón PDF -->
+            <form action="../../PDF/generate_users_pdf.php" method="post">
+                <button type="submit" class="pdfBtn">Descargar PDF</button>
+            </form>
+        </div>   
         <table>
             <thead>
                 <tr>
@@ -142,22 +171,6 @@ $result = $conn->query($sql);
                 <?php endwhile; ?>
             </tbody>
         </table>
-        <div class="button-container">
-            <!-- Botón Agregar -->
-            <a href="../../Uses/agregarusers.php">
-                <button id="addBtn">Agregar Nuevo</button>
-            </a>
-
-            <!-- Botón Excel -->
-            <a href="../../EXCEL/generate_users_xls.php">
-                <button class="excelBtn">Descargar Excel</button>
-            </a>
-
-            <!-- Botón PDF -->
-            <form action="../../PDF/generate_users_pdf.php" method="post">
-                <button type="submit" class="pdfBtn">Descargar PDF</button>
-            </form>
-        </div>   
     </main>
 </div>
 

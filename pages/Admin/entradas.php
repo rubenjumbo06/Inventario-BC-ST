@@ -47,10 +47,11 @@ $result = $conn->query($sql);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             z-index: 1000; 
         }
+       
         /* Estilos para el botón de Excel */
         .excelBtn {
-            background-color: #1f6f42; /* Verde más claro */
-            color: white;
+            background-color: #28a745 ;
+            color: white !important;
             border: none;
             padding: 8px 15px;
             cursor: pointer;
@@ -65,8 +66,8 @@ $result = $conn->query($sql);
 
         /* Estilos para el botón de PDF */
         .pdfBtn {
-            background-color: #d9534f; /* Rojo */
-            color: white;
+            background-color: #dc3545;
+            color: white !important;
             border: none;
             padding: 8px 15px;
             cursor: pointer;
@@ -76,7 +77,7 @@ $result = $conn->query($sql);
         }
 
         .pdfBtn:hover {
-            background-color: #c9302c; /* Rojo más oscuro al pasar el mouse */
+            background-color:rgb(167, 35, 31); /* Rojo más oscuro al pasar el mouse */
         }
 
         /* Contenedor de botones */
@@ -106,6 +107,17 @@ $result = $conn->query($sql);
         <strong>
         <h1 class="title text-shadow">Tabla de Entradas</h1>    
         </strong>
+        <div class="button-container">
+            <!-- Botón Excel -->
+            <a href="../../EXCEL/generate_ent_xls.php">
+                <button class="excelBtn">Descargar Excel</button>
+            </a>
+
+            <!-- Botón PDF -->
+            <form action="../../PDF/generate_ent_pdf.php" method="post">
+                <button type="submit" class="pdfBtn">Descargar PDF</button>
+            </form>
+        </div> 
         <table>
             <thead>
                 <tr>
@@ -135,18 +147,7 @@ $result = $conn->query($sql);
                 </tr>
                 <?php endwhile; ?>
             </tbody>
-        </table>
-        <div class="button-container">
-            <!-- Botón Excel -->
-            <a href="../../EXCEL/generate_ent_xls.php">
-                <button class="excelBtn">Descargar Excel</button>
-            </a>
-
-            <!-- Botón PDF -->
-            <form action="../../PDF/generate_ent_pdf.php" method="post">
-                <button type="submit" class="pdfBtn">Descargar PDF</button>
-            </form>
-        </div>   
+        </table>  
     </main>
 </div>
     

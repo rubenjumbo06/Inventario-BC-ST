@@ -58,50 +58,6 @@ tr:nth-child(even) {
     background-color: #e0a800;
 }
 
-#addBtn {
-    background-color: #0f3d0f; /* Verde oscuro */
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    cursor: pointer;
-    border-radius: 5px;
-}
-
-#addBtn:hover {
-    background-color: #0c2e0c;
-}
-/* Estilos para el botón de Excel */
-.excelBtn {
-    background-color: #1f6f42; /* Verde más claro */
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    cursor: pointer;
-    border-radius: 5px;
-    font-size: 14px;
-    transition: background-color 0.3s ease;
-}
-
-.excelBtn:hover {
-    background-color: #185732; /* Verde más oscuro al pasar el mouse */
-}
-
-/* Estilos para el botón de PDF */
-.pdfBtn {
-    background-color: #d9534f; /* Rojo */
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    cursor: pointer;
-    border-radius: 5px;
-    font-size: 14px;
-    transition: background-color 0.3s ease;
-}
-
-.pdfBtn:hover {
-    background-color: #c9302c; /* Rojo más oscuro al pasar el mouse */
-}
-
 /* Contenedor de botones */
 .button-container {
     display: flex; /* Activa Flexbox */

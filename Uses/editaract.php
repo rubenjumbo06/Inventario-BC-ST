@@ -148,6 +148,27 @@ try {
             }
             return true;
         }
+        // Función mejorada de autoajuste
+        function autoResize(textarea) {
+            // Reset height to calculate new height properly
+            textarea.style.height = 'auto';
+            // Set new height (with minimum of 1 line)
+            textarea.style.height = Math.max(textarea.scrollHeight, 50) + 'px'; // 50px es la altura mínima
+        }
+
+        // Inicialización al cargar la página
+        document.addEventListener("DOMContentLoaded", function() {
+            const textarea = document.getElementById('nombre_activos');
+            if (textarea) {
+                // Ajuste inicial
+                autoResize(textarea);
+                
+                // Disparar evento input si hay contenido para ajustar el label flotante
+                if (textarea.value) {
+                    textarea.dispatchEvent(new Event('input'));
+                }
+            }
+        });
     </script>
 </head>
 <body class="flex items-center justify-center h-screen bg-gray-100">
@@ -156,10 +177,11 @@ try {
             <div class="grid grid-cols-2 gap-6 mb-10">
                 <!-- Nombre -->
                 <div id="input" class="relative">
-                    <input type="text" id="nombre_activos" name="nombre_activos" value="<?= htmlspecialchars($activo['nombre_activos']) ?>"
-                        class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Nombre"/>
-                    <label for="nombre"
+                    <textarea id="nombre_activos" name="nombre_activos"
+                        class="block w-full text-sm px-4 py-2 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-auto resize-none"
+                        placeholder="Nombre" required
+                        oninput="autoResize(this)"><?php echo isset($activo['nombre_activos']) ? htmlspecialchars($activo['nombre_activos']) : ''; ?></textarea>
+                    <label for="nombre_activos"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Nombre
                     </label>
@@ -243,7 +265,6 @@ try {
                     <select id="ubicacion_select" name="ubicacion_activos"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-hidden pr-[48px]">
                         <option value="" disabled>Selecciona una Ubicación</option>
-                        <!-- Opciones de ubicación cargadas dinámicamente -->
                     </select>
                     <label
                         for="floating_outlined"
@@ -252,7 +273,6 @@ try {
                     </label>
                 </div>
             </div>
-
             <div class="sm:flex sm:flex-row-reverse flex gap-4">
                 <!-- Botón Guardar -->
                 <button type="submit"
@@ -271,6 +291,7 @@ try {
 
     <script>
         // Función para limitar la longitud de los campos
+
         function limitarLongitud(input, maxLength) {
                     if (input.value.length > maxLength) {
                         alert(`No puedes escribir más de ${maxLength} caracteres en este campo`);

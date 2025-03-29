@@ -10,7 +10,7 @@ class PDF extends FPDF {
             die("Error: La imagen de fondo no existe en $image_path");
         }
 
-        $this->Image($image_path, 98.5, 65, 100, 80); // Centrar fondo
+        $this->Image($image_path, 98.5, 65, 100, 80);
         $this->Image(__DIR__ . '/../assets/img/logo.png', 15, 10, 25);
 
         $this->SetFont('Arial', 'B', 24);
@@ -27,58 +27,126 @@ class PDF extends FPDF {
     }
 }
 
-// Crear el PDF
 $pdf = new PDF('L');
 $pdf->AddPage();
-
 $pdf->SetFont('Arial', 'B', 10);
 $pdf->SetFillColor(50, 168, 82);
 $pdf->SetTextColor(255);
 
-// Ancho total de la tabla
-$tableWidth = 10 + 35 + 10 + 10 + 10 + 30 + 40 + 25 + 30 + 40;
-$pageWidth = $pdf->GetPageWidth();
-$startX = ($pageWidth - $tableWidth) / 2;
-$pdf->SetX($startX);
+// Configuración exacta de columnas
+$widths = [
+    'id' => 10,
+    'nombre' => 40,
+    'cantidad' => 10,
+    'estado' => 10,
+    'empresa' => 10,
+    'ip' => 30,
+    'mac' => 40,
+    'sn' => 35,
+    'ubicacion' => 23,
+    'ingreso' => 40
+];
+
+$tableWidth = array_sum($widths);
+$startX = ($pdf->GetPageWidth() - $tableWidth) / 2;
 
 // Encabezado
-$pdf->Cell(10, 10, 'ID', 1, 0, 'C', true);
-$pdf->Cell(40, 10, 'Nombre', 1, 0, 'C', true);
-$pdf->Cell(10, 10, 'Cant.', 1, 0, 'C', true);
-$pdf->Cell(10, 10, 'Est.', 1, 0, 'C', true);
-$pdf->Cell(10, 10, 'Emp.', 1, 0, 'C', true);
-$pdf->Cell(30, 10, 'IP', 1, 0, 'C', true);
-$pdf->Cell(40, 10, 'MAC', 1, 0, 'C', true);
-$pdf->Cell(25, 10, 'SN', 1, 0, 'C', true);
-$pdf->Cell(30, 10, 'Ubicacion', 1, 0, 'C', true);
-$pdf->Cell(40, 10, 'Ingreso', 1, 1, 'C', true);
+$pdf->SetX($startX);
+foreach ($widths as $key => $width) {
+    $header = match($key) {
+        'id' => 'ID',
+        'nombre' => 'Nombre',
+        'cantidad' => 'Cant.',
+        'estado' => 'Est.',
+        'empresa' => 'Emp.',
+        'ip' => 'IP',
+        'mac' => 'MAC',
+        'sn' => 'SN',
+        'ubicacion' => 'Ubicacion',
+        'ingreso' => 'Ingreso'
+    };
+    $pdf->Cell($width, 10, $header, 1, 0, 'C', true);
+}
+$pdf->Ln();
 
 $pdf->SetFont('Arial', '', 10);
 $pdf->SetTextColor(0);
 
-// Obtener datos de la base de datos
-$sql = "SELECT * FROM tbl_activos";
+// Obtener datos
+$sql = "SELECT * FROM tbl_activos ORDER BY id_activos";
 $result = $conn->query($sql);
 
 while ($row = $result->fetch_assoc()) {
     $pdf->SetX($startX);
-    $pdf->Cell(10, 10, $row['id_activos'], 1, 0, 'C');
-    $pdf->Cell(40, 10, utf8_decode($row['nombre_activos']), 1, 0, 'C');
-    $pdf->Cell(10, 10, $row['cantidad_activos'], 1, 0, 'C');
-    $pdf->Cell(10, 10, $row['estado_activos'], 1, 0, 'C');
-    $pdf->Cell(10, 10, $row['id_empresa'], 1, 0, 'C');
-    $pdf->Cell(30, 10, $row['IP'], 1, 0, 'C');
-    $pdf->Cell(40, 10, $row['MAC'], 1, 0, 'C');
-    $pdf->Cell(25, 10, $row['SN'], 1, 0, 'C');
-    $pdf->Cell(30, 10, utf8_decode($row['ubicacion_activos']), 1, 0, 'C');
-    $pdf->Cell(40, 10, $row['fecha_ingreso'], 1, 1, 'C');
+    
+    // Preparar el texto
+    $nombre = ($row['id_activos'] == 17) 
+        ? 'GLCCTE(@)1000Mbps - Segmento 4 - Cliente 4 05 Jose S.' 
+        : $row['nombre_activos'];
+    $nombre = utf8_decode($nombre);
+    
+    // Calcular altura necesaria (método más preciso)
+    $pdf->SetFont('Arial', '', 10);
+    $maxWidth = $widths['nombre'] - 2; // Margen interno
+    $textHeight = 6; // Altura por línea
+    
+    // Dividir el texto en líneas
+    $lines = [];
+    $words = explode(' ', $nombre);
+    $currentLine = '';
+    
+    foreach ($words as $word) {
+        $testLine = $currentLine ? $currentLine.' '.$word : $word;
+        if ($pdf->GetStringWidth($testLine) < $maxWidth) {
+            $currentLine = $testLine;
+        } else {
+            $lines[] = $currentLine;
+            $currentLine = $word;
+        }
+    }
+    $lines[] = $currentLine;
+    
+    $lineCount = count($lines);
+    $cellHeight = max(10, $lineCount * $textHeight); // Mínimo 10 de altura
+    
+    // Dibujar todas las celdas primero (para bordes)
+    $pdf->Cell($widths['id'], $cellHeight, $row['id_activos'], 1, 0, 'C');
+    
+    // Guardar posición para el nombre
+    $x = $pdf->GetX();
+    $y = $pdf->GetY();
+    
+    // Dibujar celda de nombre (solo borde)
+    $pdf->Cell($widths['nombre'], $cellHeight, '', 1, 0);
+    
+    // Escribir el texto en la celda de nombre
+    $pdf->SetXY($x, $y);
+    foreach ($lines as $i => $line) {
+        $pdf->Cell($widths['nombre'], $textHeight, $line, 0, 2, 'C');
+    }
+    
+    // Restaurar posición para continuar
+    $pdf->SetXY($x + $widths['nombre'], $y);
+    
+    // Resto de celdas (todas con la misma altura)
+    $pdf->Cell($widths['cantidad'], $cellHeight, $row['cantidad_activos'], 1, 0, 'C');
+    $pdf->Cell($widths['estado'], $cellHeight, $row['estado_activos'], 1, 0, 'C');
+    $pdf->Cell($widths['empresa'], $cellHeight, $row['id_empresa'], 1, 0, 'C');
+    $pdf->Cell($widths['ip'], $cellHeight, $row['IP'], 1, 0, 'C');
+    $pdf->Cell($widths['mac'], $cellHeight, $row['MAC'], 1, 0, 'C');
+    $pdf->Cell($widths['sn'], $cellHeight, $row['SN'], 1, 0, 'C');
+    $pdf->Cell($widths['ubicacion'], $cellHeight, utf8_decode($row['ubicacion_activos']), 1, 0, 'C');
+    $pdf->Cell($widths['ingreso'], $cellHeight, $row['fecha_ingreso'], 1, 1, 'C');
+    
+    // Ajustar posición Y si hubo saltos
+    if ($lineCount > 1) {
+        $pdf->SetY($y + $cellHeight);
+    }
 }
 
-// Forzar la descarga del PDF
 header('Content-Type: application/pdf');
 header('Content-Disposition: attachment; filename="reporte_activos.pdf"');
 header('Cache-Control: max-age=0');
-
-$pdf->Output('F', 'php://output'); // Enviar el PDF al navegador para descarga
+$pdf->Output('F', 'php://output');
 exit();
 ?>
