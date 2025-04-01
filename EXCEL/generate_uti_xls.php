@@ -7,18 +7,22 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
+// Recibir parámetro de búsqueda
+$filtro_busqueda = $_POST['filter_search'] ?? '';
+
+// Crear una nueva hoja de cálculo
 $spreadsheet = new Spreadsheet();
 $sheet = $spreadsheet->getActiveSheet();
 
 // Definir encabezados y estilos
-$encabezados = ['ID', 'Nombre', 'Descripcion'];
+$encabezados = ['ID', 'Nombre', 'Descripción'];
 $columnas = range('A', 'C');
 
 // Aplicar estilos a los encabezados
 $sheet->getStyle('A1:C1')->applyFromArray([
-    'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']], // Letras blancas
-    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '0073E6']], // Fondo azul
-    'alignment' => ['horizontal' => 'center', 'vertical' => 'center'] // Centrado
+    'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '0073E6']],
+    'alignment' => ['horizontal' => 'center', 'vertical' => 'center']
 ]);
 
 // Insertar encabezados
@@ -26,8 +30,14 @@ foreach ($encabezados as $index => $nombre) {
     $sheet->setCellValue($columnas[$index] . '1', $nombre);
 }
 
-// Obtener datos de la BD
-$sql = "SELECT * FROM tbl_utilidad";
+// Construir la consulta SQL con el filtro de búsqueda
+$sql = "SELECT id_utilidad, nombre_utilidad, descripcion FROM tbl_utilidad WHERE 1=1";
+
+if (!empty($filtro_busqueda)) {
+    $sql .= " AND (nombre_utilidad LIKE '%" . $conn->real_escape_string($filtro_busqueda) . "%' 
+            OR descripcion LIKE '%" . $conn->real_escape_string($filtro_busqueda) . "%')";
+}
+
 $result = $conn->query($sql);
 $fila = 2;
 

@@ -45,18 +45,6 @@ tr:nth-child(even) {
     background-color: #ffffff;
 }
 
-.editBtn {
-    background-color: #ffc107; /* Amarillo */
-    color: black;
-    border: none;
-    padding: 6px 12px;
-    cursor: pointer;
-    border-radius: 5px;
-}
-
-.editBtn:hover {
-    background-color: #e0a800;
-}
 
 /* Contenedor de botones */
 .button-container {

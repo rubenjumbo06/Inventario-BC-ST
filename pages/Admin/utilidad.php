@@ -8,7 +8,7 @@ $role = $_SESSION['role'];
 
 require_once("../../conexion.php"); 
 
-$sql = "SELECT id_utilidad, nombre_utilidad, descripcion   FROM tbl_utilidad";
+$sql = "SELECT id_utilidad, nombre_utilidad, descripcion FROM tbl_utilidad";
 $result = $conn->query($sql);
 ?>
 
@@ -57,13 +57,10 @@ $result = $conn->query($sql);
             font-size: 14px;
             transition: background-color 0.3s ease;
         }
-
         #addBtn:hover {
-            background-color:rgb(3, 24, 46);
+            background-color: rgb(3, 24, 46);
         }
-        /* Estilos para el botón de Excel */
-        .excelBtn {
-            background-color: #28a745 ;
+        .excelBtn, .pdfBtn {
             color: white !important;
             border: none;
             padding: 8px 15px;
@@ -71,34 +68,37 @@ $result = $conn->query($sql);
             border-radius: 5px;
             font-size: 14px;
             transition: background-color 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
         }
-
+        .excelBtn {
+            background-color: #28a745;
+        }
         .excelBtn:hover {
-            background-color: #185732; /* Verde más oscuro al pasar el mouse */
+            background-color: #185732;
         }
-
-        /* Estilos para el botón de PDF */
         .pdfBtn {
             background-color: #dc3545;
-            color: white !important;
-            border: none;
-            padding: 8px 15px;
-            cursor: pointer;
+        }
+        .pdfBtn:hover {
+            background-color: rgb(167, 35, 31);
+        }
+        .button-container {
+            display: flex; 
+            justify-content: center; 
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .search-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .search-container input[type="text"] {
+            padding: 8px;
+            width: 300px;
+            border: 1px solid #ccc;
             border-radius: 5px;
             font-size: 14px;
-            transition: background-color 0.3s ease;
-        }
-
-        .pdfBtn:hover {
-            background-color:rgb(167, 35, 31); /* Rojo más oscuro al pasar el mouse */
-        }
-
-        /* Contenedor de botones */
-        .button-container {
-            display: flex; /* Activa Flexbox */
-            justify-content: center; /* Centra los botones horizontalmente */
-            gap: 10px; /* Espacio entre los botones */
-            margin-top: 20px; /* Margen superior */
         }
     </style>
 </head>
@@ -107,9 +107,9 @@ $result = $conn->query($sql);
 <?php include 'sidebarad.php'; ?>
 
 <div class="main-content">
-<div class="flex justify-between items-center mt-4 px-4">
+    <div class="flex justify-between items-center mt-4 px-4">
         <p class="text-white text-sm sm:text-lg text-shadow">
-            <strong>User:</strong> <?php echo htmlspecialchars($usuario); ?> 
+            <strong>User:</strong> <?php echo htmlspecialchars($_SESSION['username']); ?> 
             <span id="user-role"><?php echo !empty($role) ? "($role)" : ''; ?></span>
         </p>
         <p id="fechaHora" class="text-white text-sm sm:text-lg text-shadow">
@@ -119,24 +119,24 @@ $result = $conn->query($sql);
 
     <main class="container">
         <strong>
-        <h1 class="title text-shadow">Tabla de Utilidad</h1>    
+            <h1 class="title text-shadow">Tabla de Utilidad</h1>    
         </strong>
         <div class="button-container">
-            <!-- Botón Agregar -->
             <a href="../../Uses/agregaruti.php">
                 <button id="addBtn">Agregar Nuevo</button>
             </a>
-
-            <!-- Botón Excel -->
-            <a href="../../EXCEL/generate_uti_xls.php">
-                <button class="excelBtn">Descargar Excel</button>
-            </a>
-
-            <!-- Botón PDF -->
-            <form action="../../PDF/generate_uti_pdf.php" method="post">
+            <form id="excelForm" action="../../EXCEL/generate_uti_xls.php" method="post">
+                <input type="hidden" name="filter_search" id="excel_filter_search" value="">
+                <button type="submit" class="excelBtn">Descargar Excel</button>
+            </form>
+            <form id="pdfForm" action="../../PDF/generate_uti_pdf.php" method="post">
+                <input type="hidden" name="filter_search" id="filter_search" value="">
                 <button type="submit" class="pdfBtn">Descargar PDF</button>
             </form>
         </div>   
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Buscar por nombre de la utilidad...">
+        </div>
         <table>
             <thead>
                 <tr>
@@ -164,27 +164,64 @@ $result = $conn->query($sql);
     </main>
 </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            function actualizarFechaHora() {
-                const ahora = new Date();
-                const fechaHoraFormateada = ahora.toLocaleString('es-ES', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false
-                });
-                const fechaHoraElemento = document.getElementById("fechaHora");
-                if (fechaHoraElemento) {
-                    fechaHoraElemento.textContent = `Fecha/Hora Ingreso: ${fechaHoraFormateada}`;
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        function actualizarFechaHora() {
+            const ahora = new Date();
+            const fechaHoraFormateada = ahora.toLocaleString('es-ES', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            const fechaHoraElemento = document.getElementById("fechaHora");
+            if (fechaHoraElemento) {
+                fechaHoraElemento.textContent = `Fecha/Hora Ingreso: ${fechaHoraFormateada}`;
+            }
+        }
+        actualizarFechaHora();
+        setInterval(actualizarFechaHora, 1000);
+
+        // Funcionalidad de búsqueda
+        const searchInput = document.getElementById('searchInput');
+        const table = document.querySelector('table');
+        const rows = table.getElementsByTagName('tr');
+        const pdfForm = document.getElementById('pdfForm');
+        const excelForm = document.getElementById('excelForm');
+
+        function applySearch() {
+            const searchTerm = searchInput.value.toLowerCase();
+            
+            // Actualizar campos ocultos en ambos formularios
+            document.getElementById('filter_search').value = searchTerm;
+            document.getElementById('excel_filter_search').value = searchTerm;
+
+            for (let i = 1; i < rows.length; i++) {
+                const nombreUtilidad = rows[i].getElementsByTagName('td')[1].textContent.toLowerCase();
+                const descripcion = rows[i].getElementsByTagName('td')[2].textContent.toLowerCase();
+                
+                if (nombreUtilidad.includes(searchTerm) || descripcion.includes(searchTerm)) {
+                    rows[i].style.display = '';
+                } else {
+                    rows[i].style.display = 'none';
                 }
             }
-            actualizarFechaHora();
-            setInterval(actualizarFechaHora, 1000);
+        }
+
+        searchInput.addEventListener('keyup', applySearch);
+
+        // Actualizar el filtro al enviar los formularios
+        pdfForm.addEventListener('submit', function() {
+            applySearch();
         });
-    </script>
+        
+        excelForm.addEventListener('submit', function() {
+            applySearch();
+        });
+    });
+</script>
 </body>
 </html>

@@ -26,7 +26,6 @@ class PDF extends FPDF {
         $this->Cell(20, 10, 'Pagina ' . $this->PageNo(), 0, 0, 'C');
     }
     
-    // Función para envolver texto dentro de la clase PDF
     function wrapText($text, $maxWidth) {
         $lines = [];
         $words = explode(' ', $text);
@@ -52,16 +51,23 @@ $pdf->SetFont('Arial', 'B', 10);
 $pdf->SetFillColor(50, 168, 82);
 $pdf->SetTextColor(255);
 
-// Configuración exacta de columnas (ajustado para herramientas)
+// Get filter values from POST request
+$empresa_filter = isset($_POST['empresa']) ? $_POST['empresa'] : '';
+$estado_filter = isset($_POST['estado']) ? $_POST['estado'] : '';
+$utilidad_filter = isset($_POST['utilidad']) ? $_POST['utilidad'] : '';
+$ubicacion_filter = isset($_POST['ubicacion']) ? $_POST['ubicacion'] : '';
+$nombre_search = isset($_POST['nombre_search']) ? $_POST['nombre_search'] : '';
+
+// Configuración de columnas
 $widths = [
     'id' => 15,
     'nombre' => 50,
-    'cantidad' => 15,
-    'empresa' => 15,
-    'estado' => 15,
-    'utilidad' => 15,
-    'ubicacion' => 50,
-    'ingreso' => 50
+    'cantidad' => 10,
+    'empresa' => 25,
+    'estado' => 25,
+    'utilidad' => 55,
+    'ubicacion' => 35,
+    'ingreso' => 45
 ];
 
 $tableWidth = array_sum($widths);
@@ -74,10 +80,10 @@ foreach ($widths as $key => $width) {
         'id' => 'ID',
         'nombre' => 'Nombre',
         'cantidad' => 'Cant.',
-        'empresa' => 'Emp.',
-        'estado' => 'Est.',
-        'utilidad' => 'Uti.',
-        'ubicacion' => 'Ubicacion',
+        'empresa' => 'Empresa',
+        'estado' => 'Estado',
+        'utilidad' => 'Utilidad',
+        'ubicacion' => 'Ubicación',
         'ingreso' => 'Ingreso'
     };
     $pdf->Cell($width, 10, $header, 1, 0, 'C', true);
@@ -87,49 +93,64 @@ $pdf->Ln();
 $pdf->SetFont('Arial', '', 10);
 $pdf->SetTextColor(0);
 
-// Obtener datos
-$sql = "SELECT * FROM tbl_herramientas ORDER BY id_herramientas";
+// Construir la consulta SQL con filtros y búsqueda
+$sql = "SELECT h.id_herramientas, h.nombre_herramientas, h.cantidad_herramientas,
+        h.id_empresa, e.nombre as empresa_nombre,
+        h.estado_herramientas, es.nombre_estado,
+        h.utilidad_herramientas, u.nombre_utilidad,
+        h.ubicacion_herramientas, h.fecha_ingreso
+        FROM tbl_herramientas h
+        LEFT JOIN tbl_empresa e ON h.id_empresa = e.id_empresa
+        LEFT JOIN tbl_estados es ON h.estado_herramientas = es.id_estado
+        LEFT JOIN tbl_utilidad u ON h.utilidad_herramientas = u.id_utilidad
+        WHERE 1=1";
+
+if ($empresa_filter) {
+    $sql .= " AND e.nombre = '" . $conn->real_escape_string($empresa_filter) . "'";
+}
+if ($estado_filter) {
+    $sql .= " AND es.nombre_estado = '" . $conn->real_escape_string($estado_filter) . "'";
+}
+if ($utilidad_filter) {
+    $sql .= " AND u.nombre_utilidad = '" . $conn->real_escape_string($utilidad_filter) . "'";
+}
+if ($ubicacion_filter) {
+    $sql .= " AND h.ubicacion_herramientas = '" . $conn->real_escape_string($ubicacion_filter) . "'";
+}
+if ($nombre_search) {
+    $sql .= " AND h.nombre_herramientas LIKE '%" . $conn->real_escape_string($nombre_search) . "%'";
+}
+
+$sql .= " ORDER BY h.id_herramientas";
 $result = $conn->query($sql);
 
 while ($row = $result->fetch_assoc()) {
     $pdf->SetX($startX);
     
-    // Preparar el texto para el nombre
     $nombre = utf8_decode($row['nombre_herramientas']);
     $maxWidth = $widths['nombre'] - 2;
     $textHeight = 6;
     
-    // Usar la función wrapText de la clase
     $lines = $pdf->wrapText($nombre, $maxWidth);
     $lineCount = count($lines);
     $cellHeight = max(10, $lineCount * $textHeight);
     
-    // Dibujar celda de ID
     $pdf->Cell($widths['id'], $cellHeight, $row['id_herramientas'], 1, 0, 'C');
     
-    // Guardar posición para el nombre
     $x = $pdf->GetX();
     $y = $pdf->GetY();
-    
-    // Dibujar celda de nombre (solo borde)
     $pdf->Cell($widths['nombre'], $cellHeight, '', 1, 0);
-    
-    // Escribir el texto en la celda de nombre (centrado)
     $pdf->SetXY($x, $y);
     foreach ($lines as $i => $line) {
         $pdf->Cell($widths['nombre'], $textHeight, $line, 0, 2, 'C');
     }
-    
-    // Restaurar posición para continuar
     $pdf->SetXY($x + $widths['nombre'], $y);
     
-    // Resto de celdas (todas con la misma altura)
     $pdf->Cell($widths['cantidad'], $cellHeight, $row['cantidad_herramientas'], 1, 0, 'C');
-    $pdf->Cell($widths['empresa'], $cellHeight, $row['id_empresa'], 1, 0, 'C');
-    $pdf->Cell($widths['estado'], $cellHeight, $row['estado_herramientas'], 1, 0, 'C');
-    $pdf->Cell($widths['utilidad'], $cellHeight, $row['utilidad_herramientas'], 1, 0, 'C');
+    $pdf->Cell($widths['empresa'], $cellHeight, utf8_decode($row['empresa_nombre']), 1, 0, 'C');
+    $pdf->Cell($widths['estado'], $cellHeight, utf8_decode($row['nombre_estado']), 1, 0, 'C');
+    $pdf->Cell($widths['utilidad'], $cellHeight, utf8_decode($row['nombre_utilidad']), 1, 0, 'C');
     
-    // Manejo para ubicación
     $ubicacion = utf8_decode($row['ubicacion_herramientas']);
     $ubicacionLines = $pdf->wrapText($ubicacion, $widths['ubicacion'] - 2);
     $ubicacionHeight = max(10, count($ubicacionLines) * $textHeight);
@@ -143,10 +164,8 @@ while ($row = $result->fetch_assoc()) {
     }
     $pdf->SetXY($xUbic + $widths['ubicacion'], $yUbic);
     
-    // Celda de fecha de ingreso
     $pdf->Cell($widths['ingreso'], $cellHeight, $row['fecha_ingreso'], 1, 1, 'C');
     
-    // Ajustar posición Y si hubo saltos
     if ($lineCount > 1 || count($ubicacionLines) > 1) {
         $pdf->SetY($y + $cellHeight);
     }
@@ -155,6 +174,6 @@ while ($row = $result->fetch_assoc()) {
 header('Content-Type: application/pdf');
 header('Content-Disposition: attachment; filename="reporte_herramientas.pdf"');
 header('Cache-Control: max-age=0');
-$pdf->Output('F', 'php://output');
+$pdf->Output('D', 'reporte_herramientas.pdf');
 exit();
 ?>

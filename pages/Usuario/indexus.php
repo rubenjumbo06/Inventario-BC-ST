@@ -4,6 +4,9 @@ if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'user') {
     header('Location: login.php');
     exit;
 }
+
+$user = $_SESSION['username'] ?? 'Usuario Desconocido'; 
+$role = $_SESSION['role'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -12,32 +15,100 @@ if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'user') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Control - Usuario</title>
     <style>
-        .info-box {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 220px;
-            max-height: 300px;
-            background: #18919A;
-            color: white;
-            padding: 20px;
-            text-align: center;
-            font-size: 16px;
+        /* Estilos para el modal */
+        .modal {
             display: none;
-            z-index: 10;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            color: black;
+            margin: 15% auto;
+            padding: 30px;
             border: 3px solid black;
-            overflow-y: auto;
-            box-sizing: border-box; 
-        }
-
-        .button-container:hover .info-box {
-            display: block;
-        }
-
-        .button-container {
+            width: 80%;
+            max-width: 500px;
+            text-align: center;
+            border-radius: 10px;
             position: relative;
-            display: inline-block;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .modal-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .modal-button.ingresar {
+            background-color: rgba(58, 165, 37, 0.77);
+            color: white;
+        }
+
+        .modal-button.ingresar:hover {
+            background-color: rgba(26, 67, 18, 0.77);
+        }
+
+        .modal-button.cancelar {
+            background-color:rgb(202, 45, 34);
+            color: white;
+        }
+
+        .modal-button.cancelar:hover {
+            background-color: rgb(81, 18, 18);
+        }
+
+        /* Estilos para los botones del panel */
+        .panel-button {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .panel-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .panel-button img {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+            margin-bottom: 12px;
+        }
+
+        .panel-button span {
+            color: var(--verde-claro);
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .panel-button:hover span {
+            color: var(--verde-oscuro);
         }
     </style>
 </head>
@@ -45,103 +116,111 @@ if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'user') {
 
     <?php include '../header.php'; ?>
 
-        <div class="flex justify-between items-center mt-4 px-4">
-            <p class="text-white text-sm sm:text-lg text-shadow">
-                <strong>User:</strong> <?php echo htmlspecialchars($usuario); ?> 
-                <span id="user-role"><?php echo !empty($role) ? "($role)" : ''; ?></span>
-            </p>
-            <p id="fechaHora" class="text-white text-sm sm:text-lg text-shadow">
-                <strong>Fecha/Hora Ingreso:</strong> Cargando...
-            </p>
-        </div>
+    <div class="flex justify-between items-center mt-4 px-4">
+        <p class="text-white text-sm sm:text-lg text-shadow">
+            <strong>User:</strong> <?php echo htmlspecialchars($user); ?> 
+            <span id="user-role"><?php echo !empty($role) ? "($role)" : ''; ?></span>
+        </p>
+        <p id="fechaHora" class="text-white text-sm sm:text-lg text-shadow">
+            <strong>Fecha/Hora Ingreso:</strong> Cargando...
+        </p>
+    </div>
 
     <div class="px-4 sm:px-10 md:px-20 lg:px-60">
         <div class="mt-20 lg:mt-24">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
-                <div class="button-container bg-white p-6 rounded-lg shadow-md flex flex-col justify-center text-center">
-
-                    <a href="herramientas.php" class="block w-full h-full text-center cursor-pointer flex flex-col items-center">
-                        <img src="../../assets/img/herramientas.png" alt="Perfil Usuario" class="w-16 h-16 object-contain mb-4">
-                        <span class="text-[var(--verde-claro)] font-semibold hover:text-[var(--verde-oscuro)] transition">
-                            Herramientas
-                        </span>
-
-                        <div id="infoBox1" class="info-box">
-                            <p>Información de las Herramientas existentes en almacen.</p>
-                        </div>
-                    </a>
-
+                <!-- Botón Herramientas -->
+                <div class="panel-button" onclick="openModal('Herramientas', 'Información de las Herramientas existentes en almacén.', 'herramientas.php')">
+                    <img src="../../assets/img/herramientas.png" alt="Herramientas">
+                    <span>Herramientas</span>
                 </div>
 
-                <div class="button-container bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
-                    <!-- Enlace envolviendo todo el contenido -->
-                    <a href="activos.php" class="block w-full h-full text-center cursor-pointer flex flex-col items-center">
-                        <img src="../../assets/img/activos.png" alt="Perfil Usuario" class="w-16 h-16 object-contain mb-4">
-                        <span class="text-[var(--verde-claro)] font-semibold hover:text-[var(--verde-oscuro)] transition">
-                            Activos
-                        </span>
-
-                        <!-- Info Box -->
-                        <div id="infoBox1" class="info-box">
-                            <p>Información de los Activos existentes en almacen.</p>
-                        </div>
-                    </a>
+                <!-- Botón Activos -->
+                <div class="panel-button" onclick="openModal('Activos', 'Información de los Activos existentes en almacén.', 'activos.php')">
+                    <img src="../../assets/img/activos.png" alt="Activos">
+                    <span>Activos</span>
                 </div>
 
-                <div class="button-container bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
-                    <!-- Enlace envolviendo todo el contenido -->
-                    <a href="consumibles.php" class="block w-full h-full text-center cursor-pointer flex flex-col items-center">
-                        <img src="../../assets/img/consumibles.png" alt="Perfil Usuario" class="w-16 h-16 object-contain mb-4">
-                        <span class="text-[var(--verde-claro)] font-semibold hover:text-[var(--verde-oscuro)] transition">
-                            Consumibles
-                        </span>
-
-                        <!-- Info Box -->
-                        <div id="infoBox1" class="info-box">
-                            <p>Información de los Consumibles existentes en almacen.</p>
-                        </div>
-                    </a>
+                <!-- Botón Consumibles -->
+                <div class="panel-button" onclick="openModal('Consumibles', 'Información de los Consumibles existentes en almacén.', 'consumibles.php')">
+                    <img src="../../assets/img/consumibles.png" alt="Consumibles">
+                    <span>Consumibles</span>
                 </div>
 
-                <div class="button-container bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
-                    <!-- Enlace envolviendo todo el contenido -->
-                    <a href="perfilus.php" class="block w-full h-full text-center cursor-pointer flex flex-col items-center">
-                        <img src="../../assets/img/perfil.png" alt="Perfil Usuario" class="w-16 h-16 object-contain mb-4">
-                        <span class="text-[var(--verde-claro)] font-semibold hover:text-[var(--verde-oscuro)] transition">
-                            Perfil de Usuario
-                        </span>
-
-                        <!-- Info Box -->
-                        <div id="infoBox1" class="info-box">
-                            <p>Información Personal del Usuario.</p>
-                        </div>
-                    </a>
+                <!-- Botón Perfil -->
+                <div class="panel-button" onclick="openModal('Perfil de Usuario', 'Información Personal del Usuario.', 'perfilus.php')">
+                    <img src="../../assets/img/perfil.png" alt="Perfil">
+                    <span>Perfil de Usuario</span>
                 </div>
             </div>
         </div>
     </div>
-
+   <!-- Modal -->
+   <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle" class="text-2xl font-bold mb-4"></h2>
+            <p id="modalDescription" class="mb-6"></p>
+            <div class="modal-buttons">
+                <button id="modalIngresarBtn" class="modal-button ingresar">Ingresar</button>
+                <button onclick="closeModal()" class="modal-button cancelar">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            function actualizarFechaHora() {
-                const ahora = new Date();
-                const fechaHoraFormateada = ahora.toLocaleString('es-ES', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false
-                });
-                const fechaHoraElemento = document.getElementById("fechaHora");
-                if (fechaHoraElemento) {
-                    fechaHoraElemento.textContent = `Fecha/Hora Ingreso: ${fechaHoraFormateada}`;
-                }
+        // Variables para el modal
+        let currentRedirectUrl = '';
+        
+        // Función para abrir el modal
+        function openModal(title, description, redirectUrl) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalDescription').textContent = description;
+            currentRedirectUrl = redirectUrl;
+            document.getElementById('infoModal').style.display = 'block';
+        }
+        
+        // Función para cerrar el modal
+        function closeModal() {
+            document.getElementById('infoModal').style.display = 'none';
+            currentRedirectUrl = '';
+        }
+        
+        // Configurar el botón de ingresar
+        document.getElementById('modalIngresarBtn').addEventListener('click', function() {
+            if (currentRedirectUrl) {
+                window.location.href = currentRedirectUrl;
             }
-            actualizarFechaHora();
-            setInterval(actualizarFechaHora, 1000);
         });
+        
+        // Cerrar modal al hacer clic fuera del contenido
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('infoModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Función para actualizar fecha y hora
+        function actualizarFechaHora() {
+            const ahora = new Date();
+            const fechaHoraFormateada = ahora.toLocaleString('es-ES', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            const fechaHoraElemento = document.getElementById("fechaHora");
+            if (fechaHoraElemento) {
+                fechaHoraElemento.textContent = `Fecha/Hora Ingreso: ${fechaHoraFormateada}`;
+            }
+        }
+        
+        // Inicializar fecha/hora y actualizar cada segundo
+        actualizarFechaHora();
+        setInterval(actualizarFechaHora, 1000);
     </script>
 </body>
 </html>

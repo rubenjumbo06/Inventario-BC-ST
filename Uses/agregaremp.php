@@ -20,18 +20,31 @@ try {
         $nombre = isset($_POST['nombre']) ? trim(htmlspecialchars($_POST['nombre'])) : '';
         $ruc = isset($_POST['ruc']) ? trim(htmlspecialchars($_POST['ruc'])) : '';
         $servicio_empresa = isset($_POST['servicio_empresa']) ? trim(htmlspecialchars($_POST['servicio_empresa'])) : '';
-
+        
         // Validar campos obligatorios
         if (empty($nombre)) {
             throw new Exception("El nombre de la empresa es requerido");
+        }
+        
+        if (!preg_match('/^[A-Za-zÁ-Úá-úñÑ\s]+$/', $nombre)) {
+            throw new Exception("El nombre solo puede contener letras y espacios");
         }
         
         if (empty($ruc)) {
             throw new Exception("El RUC de la empresa es requerido");
         }
         
+        if (!preg_match('/^\d+$/', $ruc)) {
+            throw new Exception("El RUC solo puede contener números");
+        }
+        
         if (empty($servicio_empresa)) {
             throw new Exception("El servicio de la empresa es requerido");
+        }
+
+        // Validar que el servicio no contenga símbolos
+        if (preg_match('/[^A-Za-zÁ-Úá-úñÑ0-9\s,.]/', $servicio_empresa)) {
+            throw new Exception("El servicio no puede contener símbolos especiales");
         }
 
         // Preparar consulta SQL
@@ -89,14 +102,25 @@ ob_end_flush();
                 </div>
             </div>
         </div>
+        <?php if (isset($_SESSION['error'])): ?>
+            <div class="mb-6 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded">
+                <?php echo htmlspecialchars($_SESSION['error']); unset($_SESSION['error']); ?>
+            </div>
+        <?php endif; ?>
 
-        <form method="POST">
+        <form method="post" id="formEmpresa">
             <div class="grid grid-cols-2 gap-6 mb-10">
                 <!-- Nombre -->
                 <div id="input" class="relative">
-                    <input type="text" id="nombre" name="nombre" value="<?= htmlspecialchars($nombre) ?>"
+                    <input type="text" id="nombre" name="nombre"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Nombre" required />
+                        placeholder="Nombre" 
+                        value="<?php echo htmlspecialchars($nombre); ?>" 
+                        required
+                        pattern="[A-Za-zÁ-Úá-úñÑ\s]+"
+                        title="Solo se permiten letras y espacios"
+                        onkeypress="return validarLetras(event)"
+                        onpaste="return false;">
                     <label for="nombre"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Nombre
@@ -104,10 +128,15 @@ ob_end_flush();
                 </div>
  
                 <!-- RUC -->
-                <div id="input" class="relative">
-                    <input type="text" id="ruc" name="ruc" value="<?= htmlspecialchars($ruc) ?>"
-                        class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="RUC" required />
+                <div class="relative">
+                    <input type="text" id="ruc" name="ruc" 
+                    value="<?= htmlspecialchars($ruc) ?>"
+                    class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
+                    placeholder="RUC" required 
+                    pattern="\d+"
+                    title="Solo se permiten números"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                    onpaste="return false;">
                     <label for="ruc"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         RUC
@@ -115,11 +144,13 @@ ob_end_flush();
                 </div>
 
                 <!-- Servicio -->
-                <div id="input" class="relative">
+                <div id="input" class="relative col-span-2">
                     <textarea id="servicio_empresa" name="servicio_empresa"
                         class="block w-full text-sm px-4 py-2 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-auto resize-none"
                         placeholder="Servicio" required
-                        oninput="autoResize(this)"><?= htmlspecialchars($servicio_empresa) ?></textarea>
+                        oninput="autoResize(this); validarServicio(this)"
+                        onkeypress="return validarLetrasServicio(event)"
+                        onpaste="return false;"><?= htmlspecialchars($servicio_empresa) ?></textarea>
                     <label for="servicio_empresa"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Servicio
@@ -135,7 +166,7 @@ ob_end_flush();
                 </button>
 
                 <!-- Botón Cancelar -->
-                <button type="reset"
+                <button type="button"
                     class="w-fit rounded-lg text-sm px-6 py-3 h-[50px] border border-[var(--verde-oscuro)] text-[var(--verde-oscuro)] font-semibold shadow-md hover:bg-red-500 hover:text-white transition-all duration-300"
                     onclick="window.history.back();">
                     <div class="flex gap-2 items-center">Cancelar</div>
@@ -145,15 +176,95 @@ ob_end_flush();
     </div>
 
     <script>
+    // Función para autoajustar el textarea
     function autoResize(textarea) {
         textarea.style.height = 'auto';
-        textarea.style.height = textarea.scrollHeight + 'px';
+        textarea.style.height = (textarea.scrollHeight) + 'px';
     }
+
+    // Validar solo letras (incluye acentos y ñ) para el campo nombre
+    function validarLetras(event) {
+        const tecla = String.fromCharCode(event.keyCode || event.which);
+        const letras = /^[A-Za-zÁ-Úá-úñÑ\s]$/;
+        
+        // Permitir teclas de control
+        if (event.ctrlKey || event.altKey || event.metaKey) return true;
+        if ([8, 9, 13, 32].includes(event.keyCode)) return true; // backspace, tab, enter, space
+        
+        if (!letras.test(tecla)) {
+            event.preventDefault();
+            return false;
+        }
+        return true;
+    }
+
+    // Validar letras para el campo servicio (permite números también)
+    function validarLetrasServicio(event) {
+        const tecla = String.fromCharCode(event.keyCode || event.which);
+        const permitidas = /^[A-Za-zÁ-Úá-úñÑ0-9\s,.]$/;
+        
+        // Permitir teclas de control
+        if (event.ctrlKey || event.altKey || event.metaKey) return true;
+        if ([8, 9, 13, 32].includes(event.keyCode)) return true; // backspace, tab, enter, space
+        
+        if (!permitidas.test(tecla)) {
+            event.preventDefault();
+            return false;
+        }
+        return true;
+    }
+
+    // Validar el contenido del servicio mientras se escribe
+    function validarServicio(textarea) {
+        // Eliminar símbolos especiales (mantiene letras, números, espacios, comas y puntos)
+        textarea.value = textarea.value.replace(/[^A-Za-zÁ-Úá-úñÑ0-9\s,.]/g, '');
+    }
+
+    // Validación del formulario
+    document.getElementById('formEmpresa').addEventListener('submit', function(e) {
+        const nombre = document.getElementById('nombre');
+        const ruc = document.getElementById('ruc');
+        const servicio = document.getElementById('servicio_empresa');
+        
+        // Validación adicional por si acaso
+        if (!/^[A-Za-zÁ-Úá-úñÑ\s]+$/.test(nombre.value)) {
+            alert('El nombre solo puede contener letras y espacios');
+            e.preventDefault();
+            return;
+        }
+        
+        if (!/^\d+$/.test(ruc.value)) {
+            alert('El RUC solo puede contener números');
+            e.preventDefault();
+            return;
+        }
+        
+        if (servicio.value.trim() === '') {
+            alert('El servicio es requerido');
+            e.preventDefault();
+            return;
+        }
+
+        // Validar que el servicio no contenga símbolos
+        if (/[^A-Za-zÁ-Úá-úñÑ0-9\s,.]/.test(servicio.value)) {
+            alert('El servicio no puede contener símbolos especiales');
+            e.preventDefault();
+            return;
+        }
+    });
 
     // Aplicar auto-resize cuando se carga la página
     document.addEventListener("DOMContentLoaded", function() {
         const textarea = document.getElementById('servicio_empresa');
         autoResize(textarea);
+    });
+
+    // Prevenir pegado de texto en todos los campos
+    document.querySelectorAll('input, textarea').forEach(element => {
+        element.addEventListener('paste', function(e) {
+            e.preventDefault();
+            return false;
+        });
     });
     </script>
 </body>

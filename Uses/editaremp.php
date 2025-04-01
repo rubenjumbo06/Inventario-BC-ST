@@ -54,9 +54,19 @@ try {
             if (empty($nombre)) {
                 throw new Exception("El nombre de la empresa es requerido");
             }
+            if (!preg_match("/^[a-zA-Z0-9\s]+$/", $nombre)) {
+                throw new Exception("El nombre solo puede contener letras, números y espacios");
+            }
 
             if (empty($ruc)) {
                 throw new Exception("El RUC de la empresa es requerido");
+            }
+            if (!preg_match("/^[0-9]{11}$/", $ruc)) {
+                throw new Exception("El RUC debe contener exactamente 11 dígitos numéricos");
+            }
+
+            if (!empty($servicio_empresa) && !preg_match("/^[a-zA-Z0-9\s]+$/", $servicio_empresa)) {
+                throw new Exception("El servicio solo puede contener letras, números y espacios");
             }
 
             // Construir consulta SQL dinámica
@@ -86,7 +96,6 @@ try {
             // Si no hay campos para actualizar
             if (empty($updates)) {
                 $_SESSION['message'] = 'No se realizaron cambios';
-                // Limpiar buffer y redirigir
                 ob_end_clean();
                 header("Location: ../pages/Admin/empresa.php");
                 exit();
@@ -107,7 +116,6 @@ try {
             
             if ($stmt->execute()) {
                 $_SESSION['success'] = 'Empresa actualizada correctamente';
-                // Limpiar buffer y redirigir
                 ob_end_clean();
                 header("Location: ../pages/Admin/empresa.php");
                 exit();
@@ -116,7 +124,6 @@ try {
             }
         } catch (Exception $e) {
             $_SESSION['error'] = $e->getMessage();
-            // Limpiar buffer y redirigir
             ob_end_clean();
             header("Location: " . $_SERVER['HTTP_REFERER']);
             exit();
@@ -125,13 +132,11 @@ try {
 
 } catch (Exception $e) {
     $_SESSION['error'] = $e->getMessage();
-    // Limpiar buffer y redirigir
     ob_end_clean();
     header("Location: ../pages/error.php");
     exit();
 }
 
-// Limpiar buffer antes de mostrar el HTML
 ob_end_flush();
 ?>
 
@@ -165,21 +170,27 @@ ob_end_flush();
                 <div id="input" class="relative">
                     <input type="text" id="nombre" name="nombre" value="<?= htmlspecialchars($nombre) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Nombre" required/>
+                        placeholder="Nombre" required
+                        pattern="[A-Za-z0-9\s]+"
+                        title="Solo se permiten letras, números y espacios"/>
                     <label for="nombre"
-                        class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
+                        class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
                         Nombre
                     </label>
                 </div>
 
                 <!-- RUC -->
                 <div id="input" class="relative">
-                    <input type="number" id="ruc" name="ruc" value="<?= htmlspecialchars($ruc) ?>"
+                    <input type="text" id="ruc" name="ruc" value="<?= htmlspecialchars($ruc) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="RUC" required/>
+                        placeholder="RUC (11 dígitos)" required
+                        pattern="[0-9]{11}"
+                        maxlength="11"
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11)"
+                        title="Solo se permiten 11 dígitos numéricos"/>
                     <label for="ruc"
-                        class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
-                        RUC
+                        class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
+                        RUC (11 dígitos)
                     </label>
                 </div>
                 
@@ -187,10 +198,10 @@ ob_end_flush();
                 <div id="input" class="relative">
                     <textarea id="servicio_empresa" name="servicio_empresa"
                         class="block w-full text-sm px-4 py-2 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-auto resize-none"
-                        placeholder="Servicio" required
-                        oninput="autoResize(this)"><?= htmlspecialchars($servicio_empresa) ?></textarea>
+                        placeholder="Servicio"
+                        oninput="autoResize(this); this.value = this.value.replace(/[^a-zA-Z0-9\s]/g, '');"><?= htmlspecialchars($servicio_empresa) ?></textarea>
                     <label for="servicio_empresa"
-                        class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
+                        class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
                         Servicio
                     </label>
                 </div>
@@ -211,16 +222,41 @@ ob_end_flush();
             </div>
         </form>
     </div>
+
     <script>
+    // Función para ajustar la altura del textarea
     function autoResize(textarea) {
         textarea.style.height = 'auto';
-        textarea.style.height = textarea.scrollHeight + 'px';
+        textarea.style.height = Math.max(textarea.scrollHeight, 50) + 'px'; // Altura mínima de 50px
     }
 
-    // Aplicar auto-resize al cargar la página
+    // Validación para campos de texto (solo letras, números y espacios)
+    function validarTexto(input) {
+        input.value = input.value.replace(/[^a-zA-Z0-9\s]/g, '');
+    }
+
+    // Aplicar validaciones y auto-resize al cargar la página
     document.addEventListener("DOMContentLoaded", function() {
+        // Configuración para nombre
+        const nombreInput = document.getElementById('nombre');
+        nombreInput.addEventListener("input", function() {
+            validarTexto(this);
+        });
+
+        // Configuración para ruc (ya tiene validación en HTML, pero reforzamos)
+        const rucInput = document.getElementById('ruc');
+        rucInput.addEventListener("input", function() {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);
+        });
+
+        // Configuración para servicio_empresa
         const textarea = document.getElementById('servicio_empresa');
-        autoResize(textarea);
+        if (textarea) {
+            autoResize(textarea); // Ajuste inicial
+            if (textarea.value) {
+                textarea.dispatchEvent(new Event('input')); // Ajustar label si hay contenido
+            }
+        }
     });
     </script>
 </body>

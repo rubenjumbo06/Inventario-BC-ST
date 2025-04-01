@@ -1,8 +1,41 @@
 <?php
-session_start(); 
-require('../fpdf/fpdf.php');
-require('../conexion.php');
+session_start();
+require_once("../fpdf/fpdf.php"); // Ajusta la ruta según tu estructura
+require_once("../conexion.php");  // Ajusta la ruta según tu estructura
 
+// Obtener los filtros desde el formulario POST
+$filter_search = isset($_POST['filter_search']) && !empty($_POST['filter_search']) ? $_POST['filter_search'] : null;
+$filter_rol = isset($_POST['filter_rol']) && !empty($_POST['filter_rol']) ? $_POST['filter_rol'] : null;
+
+// Construir la consulta SQL con filtros dinámicos
+$sql = "SELECT id_user, nombre, apellidos, username, role, correo, telefono, fecha_creacion, fecha_modificacion 
+        FROM tbl_users WHERE 1=1";
+$params = [];
+$types = "";
+
+if ($filter_search) {
+    $sql .= " AND nombre LIKE ?";
+    $params[] = "%$filter_search%";
+    $types .= "s";
+}
+if ($filter_rol) {
+    $sql .= " AND role = ?";
+    $params[] = $filter_rol;
+    $types .= "s";
+}
+
+// Preparar y ejecutar la consulta
+$stmt = $conn->prepare($sql);
+if (!$stmt) {
+    die("Error en la preparación de la consulta: " . $conn->error);
+}
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
+$stmt->execute();
+$result = $stmt->get_result();
+
+// Crear el PDF con tus estilos originales
 class PDF extends FPDF {
     function Header() {
         $image_path = __DIR__ . '/../assets/img/fondopdf.jpeg';
@@ -10,7 +43,7 @@ class PDF extends FPDF {
             die("Error: La imagen de fondo no existe en $image_path");
         }
 
-        $this->Image($image_path, 98.5, 65, 100, 80); // Centrar fondo
+        $this->Image($image_path, 98.5, 65, 100, 80);
         $this->Image(__DIR__ . '/../assets/img/logo.png', 15, 10, 25);
 
         $this->SetFont('Arial', 'B', 24);
@@ -25,6 +58,24 @@ class PDF extends FPDF {
         $this->SetX($this->GetPageWidth() / 2 - 10);
         $this->Cell(20, 10, 'Pagina ' . $this->PageNo(), 0, 0, 'C');
     }
+    
+    function wrapText($text, $maxWidth) {
+        $lines = [];
+        $words = explode(' ', $text);
+        $currentLine = '';
+        
+        foreach ($words as $word) {
+            $testLine = $currentLine ? $currentLine.' '.$word : $word;
+            if ($this->GetStringWidth($testLine) < $maxWidth) {
+                $currentLine = $testLine;
+            } else {
+                $lines[] = $currentLine;
+                $currentLine = $word;
+            }
+        }
+        $lines[] = $currentLine;
+        return $lines;
+    }
 }
 
 $pdf = new PDF('L');
@@ -34,47 +85,105 @@ $pdf->SetFont('Arial', 'B', 10);
 $pdf->SetFillColor(50, 168, 82);
 $pdf->SetTextColor(255);
 
-// Ancho total de la tabla (sin la columna de contraseñas)
-$tableWidth = 10 + 20 + 25 + 20 + 15 + 50 + 25 + 40 + 40;
+// Configuración exacta de columnas
+$widths = [
+    'id' => 15,
+    'nombre' => 30,
+    'apellidos' => 25,
+    'usuario' => 25,
+    'rol' => 15,
+    'correo' => 55,
+    'telefono' => 25,
+    'creacion' => 40,
+    'modificacion' => 40
+];
+
+$tableWidth = array_sum($widths);
 $pageWidth = $pdf->GetPageWidth();
 $startX = ($pageWidth - $tableWidth) / 2;
-$pdf->SetX($startX);
 
-// Encabezado (sin la columna de contraseñas)
-$pdf->Cell(10, 10, 'ID', 1, 0, 'C', true);
-$pdf->Cell(20, 10, 'Nombre', 1, 0, 'C', true);
-$pdf->Cell(25, 10, 'Apellidos', 1, 0, 'C', true);
-$pdf->Cell(20, 10, 'Usuario', 1, 0, 'C', true);
-$pdf->Cell(15, 10, 'Rol', 1, 0, 'C', true);
-$pdf->Cell(50, 10, 'Correo', 1, 0, 'C', true);
-$pdf->Cell(25, 10, 'Telefono', 1, 0, 'C', true);
-$pdf->Cell(40, 10, 'Creacion', 1, 0, 'C', true);
-$pdf->Cell(40, 10, 'Modificacion', 1, 1, 'C', true);
+// Encabezado
+$pdf->SetX($startX);
+foreach ($widths as $key => $width) {
+    $header = match($key) {
+        'id' => 'ID',
+        'nombre' => 'Nombre',
+        'apellidos' => 'Apellidos',
+        'usuario' => 'Usuario',
+        'rol' => 'Rol',
+        'correo' => 'Correo',
+        'telefono' => 'Telefono',
+        'creacion' => 'Creacion',
+        'modificacion' => 'Modificacion'
+    };
+    $pdf->Cell($width, 10, $header, 1, 0, 'C', true);
+}
+$pdf->Ln();
 
 $pdf->SetFont('Arial', '', 10);
 $pdf->SetTextColor(0);
 
-$sql = "SELECT * FROM tbl_users";
-$result = $conn->query($sql);
-
+// Datos filtrados
 while ($row = $result->fetch_assoc()) {
     $pdf->SetX($startX);
-    $pdf->Cell(10, 10, $row['id_user'], 1, 0, 'C');
-    $pdf->Cell(20, 10, utf8_decode($row['nombre']), 1, 0, 'C');
-    $pdf->Cell(25, 10, utf8_decode($row['apellidos']), 1, 0, 'C');
-    $pdf->Cell(20, 10, $row['username'], 1, 0, 'C');
-    $pdf->Cell(15, 10, $row['role'], 1, 0, 'C');
-    $pdf->Cell(50, 10, $row['correo'], 1, 0, 'C');
-    $pdf->Cell(25, 10, $row['telefono'], 1, 0, 'C');
-    $pdf->Cell(40, 10, $row['fecha_creacion'], 1, 0, 'C');
-    $pdf->Cell(40, 10, $row['fecha_modificacion'], 1, 1, 'C');
+    
+    // Calcular altura necesaria para nombre y apellidos
+    $textHeight = 6; // Altura por línea
+    $maxHeight = 10; // Altura mínima
+    
+    // Procesar nombre
+    $nombre = utf8_decode($row['nombre']);
+    $maxWidth = $widths['nombre'] - 2;
+    $nombreLines = $pdf->wrapText($nombre, $maxWidth);
+    $nombreHeight = max($maxHeight, count($nombreLines) * $textHeight);
+    
+    // Procesar apellidos
+    $apellidos = utf8_decode($row['apellidos']);
+    $maxWidth = $widths['apellidos'] - 2;
+    $apellidosLines = $pdf->wrapText($apellidos, $maxWidth);
+    $apellidosHeight = max($maxHeight, count($apellidosLines) * $textHeight);
+    
+    // Altura final de la fila
+    $cellHeight = max($nombreHeight, $apellidosHeight);
+    
+    // Dibujar ID
+    $pdf->Cell($widths['id'], $cellHeight, $row['id_user'], 1, 0, 'C');
+    
+    // Dibujar Nombre
+    $x = $pdf->GetX();
+    $y = $pdf->GetY();
+    $pdf->Cell($widths['nombre'], $cellHeight, '', 1, 0);
+    $pdf->SetXY($x, $y);
+    foreach ($nombreLines as $i => $line) {
+        $pdf->Cell($widths['nombre'], $textHeight, $line, 0, 2, 'C');
+    }
+    $pdf->SetXY($x + $widths['nombre'], $y);
+    
+    // Dibujar Apellidos
+    $x = $pdf->GetX();
+    $pdf->Cell($widths['apellidos'], $cellHeight, '', 1, 0);
+    $pdf->SetXY($x, $y);
+    foreach ($apellidosLines as $i => $line) {
+        $pdf->Cell($widths['apellidos'], $textHeight, $line, 0, 2, 'C');
+    }
+    $pdf->SetXY($x + $widths['apellidos'], $y);
+    
+    // Resto de celdas (altura uniforme)
+    $pdf->Cell($widths['usuario'], $cellHeight, $row['username'], 1, 0, 'C');
+    $pdf->Cell($widths['rol'], $cellHeight, $row['role'], 1, 0, 'C');
+    $pdf->Cell($widths['correo'], $cellHeight, $row['correo'], 1, 0, 'C');
+    $pdf->Cell($widths['telefono'], $cellHeight, $row['telefono'], 1, 0, 'C');
+    $pdf->Cell($widths['creacion'], $cellHeight, $row['fecha_creacion'], 1, 0, 'C');
+    $pdf->Cell($widths['modificacion'], $cellHeight, $row['fecha_modificacion'], 1, 1, 'C');
+    
+    // Ajustar posición Y si hubo saltos
+    if ($cellHeight > 10) {
+        $pdf->SetY($y + $cellHeight);
+    }
 }
 
-// Forzar la descarga del PDF
 header('Content-Type: application/pdf');
 header('Content-Disposition: attachment; filename="reporte_usuarios.pdf"');
 header('Cache-Control: max-age=0');
-
-$pdf->Output('F', 'php://output'); // Enviar el PDF al navegador para descarga
+$pdf->Output('F', 'php://output');
 exit();
-?>

@@ -7,6 +7,9 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
+// Obtener filtro desde el formulario POST
+$filter_search = isset($_POST['filter_search']) && !empty($_POST['filter_search']) ? $_POST['filter_search'] : null;
+
 // Crear una nueva hoja de cálculo
 $spreadsheet = new Spreadsheet();
 $sheet = $spreadsheet->getActiveSheet();
@@ -17,9 +20,9 @@ $columnas = range('A', 'E');
 
 // Aplicar estilos a los encabezados
 $sheet->getStyle('A1:E1')->applyFromArray([
-    'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']], // Letras blancas
-    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '0073E6']], // Fondo azul
-    'alignment' => ['horizontal' => 'center', 'vertical' => 'center'] // Centrado
+    'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '0073E6']],
+    'alignment' => ['horizontal' => 'center', 'vertical' => 'center']
 ]);
 
 // Insertar encabezados
@@ -27,11 +30,31 @@ foreach ($encabezados as $index => $nombre) {
     $sheet->setCellValue($columnas[$index] . '1', $nombre);
 }
 
-// Obtener datos de la BD
-$sql = "SELECT * FROM tbl_tecnico";
-$result = $conn->query($sql);
-$fila = 2;
+// Construir la consulta SQL con filtro
+$sql = "SELECT id_tecnico, nombre_tecnico, dni_tecnico, edad_tecnico, num_telef 
+        FROM tbl_tecnico 
+        WHERE 1=1";
+$params = [];
+$types = "";
 
+if ($filter_search) {
+    $sql .= " AND nombre_tecnico LIKE ?";
+    $params[] = "%$filter_search%";
+    $types .= "s";
+}
+
+// Preparar y ejecutar la consulta
+$stmt = $conn->prepare($sql);
+if (!$stmt) {
+    die("Error en la preparación de la consulta: " . $conn->error);
+}
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
+$stmt->execute();
+$result = $stmt->get_result();
+
+$fila = 2;
 while ($row = $result->fetch_assoc()) {
     $sheet->setCellValue('A' . $fila, $row['id_tecnico']);
     $sheet->setCellValue('B' . $fila, $row['nombre_tecnico']);

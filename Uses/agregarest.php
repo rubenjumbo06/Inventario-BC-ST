@@ -97,7 +97,7 @@ ob_end_flush();
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
                         placeholder="Nombre" required />
                     <label for="nombre_estado"
-                        class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
+                        class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scalechés-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Nombre
                     </label>
                 </div>
@@ -132,15 +132,32 @@ ob_end_flush();
         </form>
     </div>
     <script>
+    // Función para autoajustar el tamaño del textarea
     function autoResize(textarea) {
         textarea.style.height = 'auto';
         textarea.style.height = textarea.scrollHeight + 'px';
     }
 
-    // Apply auto-resize when the page loads
+    // Validación para campos de texto (solo letras, números y espacios)
+    function validarTexto(input) {
+        input.value = input.value.replace(/[^a-zA-Z0-9\s]/g, '');
+    }
+
+    // Aplicar validaciones y auto-resize al cargar la página
     document.addEventListener("DOMContentLoaded", function() {
         const textarea = document.getElementById('descripcion');
         autoResize(textarea);
+
+        // Validación para nombre_estado
+        document.getElementById('nombre_estado').addEventListener('input', function() {
+            validarTexto(this);
+        });
+
+        // Validación para descripcion
+        document.getElementById('descripcion').addEventListener('input', function() {
+            validarTexto(this);
+            autoResize(this); // Mantener el autoajuste después de la validación
+        });
     });
     </script>
 </body>

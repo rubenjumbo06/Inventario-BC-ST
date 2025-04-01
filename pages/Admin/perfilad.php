@@ -42,9 +42,10 @@ $conn->close();
             <div class="md:w-2/3 md:pl-8">
                 <h2 class="text-xl font-semibold text-[#22694c] dark:text-[#22694c] mb-4">Permisos de Usuario</h2>
                 <p class="text-gray-700 dark:text-gray-300 mb-6 text-justify">
-                    Como <?php echo htmlspecialchars($user['role']); ?> del sistema de gestión de inventarios, tienes acceso a todas las funciones clave del sistema, 
-                    lo que te permite gestionar eficientemente los productos, usuarios y operaciones. Entre estos se destaca el poder agregar, 
-                    editar y eliminar productos del inventario, así como acceso a todas las tablas y reportes generales de la base de datos.
+                Como <?php echo htmlspecialchars($user['role']); ?> dentro del sistema de gestión de inventarios, cuentas con acceso completo a las funciones esenciales de la plataforma. 
+                Esto te permite administrar de manera eficiente los productos, usuarios y operaciones relacionadas con el inventario. Entre tus atribuciones se incluyen la capacidad de agregar, modificar 
+                y eliminar productos del inventario, así como el acceso a la totalidad de las tablas y reportes generales de la base de datos. Estas herramientas te proporcionan un control integral sobre 
+                la gestión del sistema, asegurando una administración óptima y organizada de los recursos disponibles.  
                 </p>
                 <h2 class="text-xl font-semibold text-[#22694c] dark:text-[#22694c] mb-4">Tablas Disponibles</h2>
                 <div class="flex flex-wrap gap-2 mb-6">
@@ -56,7 +57,8 @@ $conn->close();
                     <span class="bg-green-100 text-[#22694c] px-3 py-1 rounded-full text-sm cursor-pointer">Técnico</span>
                     <span class="bg-green-100 text-[#22694c] px-3 py-1 rounded-full text-sm cursor-pointer">Usuarios</span>
                     <span class="bg-green-100 text-[#22694c] px-3 py-1 rounded-full text-sm cursor-pointer">Utilidad</span>
-                    <span class="bg-green-100 text-[#22694c] px-3 py-1 rounded-full text-sm cursor-pointer">Registro de Salidas</span>
+                    <span class="bg-green-100 text-[#22694c] px-3 py-1 rounded-full text-sm cursor-pointer">Salidas</span>
+                    <span class="bg-green-100 text-[#22694c] px-3 py-1 rounded-full text-sm cursor-pointer">Entradas</span>
                 </div>
                 <h2 class="text-xl font-semibold text-[#22694c] dark:text-[#22694c] mb-4">Información</h2>
                 <ul class="space-y-2 text-gray-700 dark:text-gray-300">

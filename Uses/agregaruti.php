@@ -121,17 +121,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
 
     <script>
+    // Función para autoajustar el tamaño del textarea
     function autoResize(textarea) {
-        // Reset the height to auto to recalculate the height
         textarea.style.height = 'auto';
-        // Set the height to the scrollHeight (content height)
         textarea.style.height = textarea.scrollHeight + 'px';
     }
 
-    // Apply auto-resize when the page loads (in case there's pre-filled content)
+    // Validación para campos (solo letras, números y espacios)
+    function validarTexto(input) {
+        input.value = input.value.replace(/[^a-zA-Z0-9\s]/g, '');
+    }
+
+    // Aplicar validaciones y auto-resize al cargar la página
     document.addEventListener("DOMContentLoaded", function () {
         const textarea = document.getElementById('descripcion');
         autoResize(textarea);
+
+        // Validación para el campo nombre_utilidad
+        document.getElementById('nombre_utilidad').addEventListener('input', function() {
+            validarTexto(this);
+        });
+
+        // Validación para el campo descripcion
+        document.getElementById('descripcion').addEventListener('input', function() {
+            validarTexto(this);
+            autoResize(this); // Mantener el autoajuste después de la validación
+        });
     });
     </script>
 </body>

@@ -2,7 +2,7 @@
 include '../conexion.php';
 
 // Inicializar variables del formulario
-$nombre = $apellidos = $username = $password = $password =  $role =  $correo =   $telefono = "";
+$nombre = $apellidos = $username = $password = $role = $correo = $telefono = "";
 $mensaje = "";
 
 // Procesar el formulario cuando se envíe
@@ -11,13 +11,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nombre = htmlspecialchars($_POST['nombre']);
     $apellidos = htmlspecialchars($_POST['apellidos']);
     $username = htmlspecialchars($_POST['username']);
-    $password = htmlspecialchars($_POST['password']);
+    $password = $_POST['password']; // No aplicar htmlspecialchars a la contraseña
     $role = htmlspecialchars($_POST['role']);
     $correo = htmlspecialchars($_POST['correo']);
     $telefono = htmlspecialchars($_POST['telefono']);
 
     // Validar que los campos no estén vacíos
     if (!empty($nombre) && !empty($apellidos) && !empty($username) && !empty($password) && !empty($role) && !empty($correo) && !empty($telefono)) {
+        // Hashear la contraseña
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+        
         // Nombre fijo de la tabla
         $tabla = "tbl_users";
 
@@ -27,7 +30,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Preparar la sentencia
         if ($stmt = $conn->prepare($sql)) {
             // Enlazar los parámetros
-            $stmt->bind_param("sssssss", $nombre, $apellidos, $username, $password, $role, $correo, $telefono);
+            $stmt->bind_param("sssssss", $nombre, $apellidos, $username, $hashed_password, $role, $correo, $telefono);
 
             // Ejecutar la consulta
             if ($stmt->execute()) {
@@ -54,9 +57,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agregar Datos</title>
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../assets/CSS/agg.css">
+    <!-- Agregar Font Awesome para el icono del ojo -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="flex items-center justify-center h-screen bg-gray-100">
     <div class="p-10 rounded-lg shadow-lg">
@@ -113,15 +117,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </label>
                 </div>
 
-                <!-- Campo Password -->
+                <!-- Campo Password con ojo para mostrar/ocultar -->
                 <div id="input" class="relative">
-                    <input type="text" id="floating_outlined" name="password"
-                        class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Contraseña" value="<?= isset($_POST['password']) ? htmlspecialchars($_POST['password']) : '' ?>"/>
-                    <label for="floating_outlined"
-                        class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
-                        Contraseña
-                    </label>
+                    <div class="relative">
+                        <input type="password" id="password" name="password"
+                            class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
+                            placeholder="Contraseña" required />
+                        <label for="password"
+                            class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
+                            Contraseña
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Role -->
@@ -151,14 +157,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </label>
                 </div>
 
-                <!-- Telefono -->
-               <div id="input" class="relative">
-                    <input type="text" id="telefono" name="telefono"
+                <!-- Número de Teléfono -->
+                <div class="relative">
+                    <input type="tel" id="telefono" name="telefono" 
+                        value="<?= htmlspecialchars($telefono) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Telefono" value="<?php echo $telefono; ?>" required />
+                        placeholder="Número de Teléfono" required 
+                        pattern="[0-9]{9}" maxlength="9"
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)"
+                        onkeypress="return event.charCode >= 48 && event.charCode <= 57">
                     <label for="telefono"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
-                        Telefono
+                        Número de Teléfono (9 dígitos)
                     </label>
                 </div>
             </div>
@@ -177,8 +187,43 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <div class="flex gap-2 items-center">Cancelar</div>
                 </button>
             </div>
-
         </form>
     </div>
+    <script>
+    // Validación para campos de texto (solo letras, números y espacios)
+    function validarTexto(input) {
+        input.value = input.value.replace(/[^a-zA-Z0-9\s]/g, '');
+    }
+
+    // Validación para correo (permite formato de email válido)
+    function validarCorreo(input) {
+        input.value = input.value.replace(/[^a-zA-Z0-9@._-]/g, '');
+    }
+
+    // Aplicar validaciones al cargar la página
+    document.addEventListener("DOMContentLoaded", function () {
+        // Validación para nombre
+        document.getElementById('nombre').addEventListener('input', function() {
+            validarTexto(this);
+        });
+
+        // Validación para apellidos
+        document.getElementById('apellidos').addEventListener('input', function() {
+            validarTexto(this);
+        });
+
+        // Validación para username
+        document.getElementById('username').addEventListener('input', function() {
+            validarTexto(this);
+        });
+
+        // Validación para correo
+        document.getElementById('correo').addEventListener('input', function() {
+            validarCorreo(this);
+        });
+
+        // El campo teléfono ya tiene su propia validación en el HTML, no se toca
+    });
+    </script>
 </body>
 </html>

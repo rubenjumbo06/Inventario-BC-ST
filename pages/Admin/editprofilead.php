@@ -55,6 +55,11 @@ try {
         if (!preg_match('/^[A-Za-z\s]+$/', $apellidos)) {
             throw new Exception("El campo 'Apellidos' solo puede contener letras y espacios.");
         }
+        
+        // Validar el username (letras, números, sin espacios)
+        if (!preg_match('/^[A-Za-z0-9]+$/', $username)) {
+            throw new Exception("El username solo puede contener letras y números, sin espacios.");
+        }
 
         // Validar el correo electrónico
         if (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
@@ -63,16 +68,16 @@ try {
 
         // Validar el número de teléfono
         if (!preg_match('/^[0-9]{9}$/', $telefono)) {
-            throw new Exception("El número de teléfono debe tener 9 dígitos.");
+            throw new Exception("El número de teléfono debe tener exactamente 9 dígitos.");
         }
 
         // Actualizar los datos del usuario
         if (!empty($password)) {
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $sql = "UPDATE tbl_users SET nombre = ?, apellidos = ?, username = ?, password = ?, correo = ?, telefono = ? WHERE id_user = ?";
+            $sql = "UPDATE tbl_users SET nombre = ?, apellidos = ?, username = ?, password = ?, correo = ?, telefono = ?, fecha_modificacion = CURRENT_TIMESTAMP WHERE id_user = ?";
             $params = [$nombre, $apellidos, $username, $hashed_password, $correo, $telefono, $id_user];
         } else {
-            $sql = "UPDATE tbl_users SET nombre = ?, apellidos = ?, username = ?, correo = ?, telefono = ? WHERE id_user = ?";
+            $sql = "UPDATE tbl_users SET nombre = ?, apellidos = ?, username = ?, correo = ?, telefono = ?, fecha_modificacion = CURRENT_TIMESTAMP WHERE id_user = ?";
             $params = [$nombre, $apellidos, $username, $correo, $telefono, $id_user];
         }
 
@@ -145,7 +150,10 @@ $conn->close();
                 <div id="input" class="relative">
                     <input type="text" id="nombre" name="nombre"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Nombres" value="<?php echo htmlspecialchars($nombre); ?>" required />
+                        placeholder="Nombres" value="<?php echo htmlspecialchars($nombre); ?>" required 
+                        pattern="[A-Za-z\s]+"
+                        title="Solo se permiten letras y espacios"
+                        oninput="this.value = this.value.replace(/[^A-Za-z\s]/g, '')"/>
                     <label for="nombre"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Nombres
@@ -156,7 +164,10 @@ $conn->close();
                 <div id="input" class="relative">
                     <input type="text" id="apellidos" name="apellidos"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Apellidos" value="<?php echo htmlspecialchars($apellidos); ?>" required />
+                        placeholder="Apellidos" value="<?php echo htmlspecialchars($apellidos); ?>" required 
+                        pattern="[A-Za-z\s]+"
+                        title="Solo se permiten letras y espacios"
+                        oninput="this.value = this.value.replace(/[^A-Za-z\s]/g, '')"/>
                     <label for="apellidos"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Apellidos
@@ -165,10 +176,13 @@ $conn->close();
 
                 <!-- Campo Username -->
                 <div id="input" class="relative">
-                    <input type="text" id="floating_outlined" name="username"
+                    <input type="text" id="username" name="username"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Username" value="<?php echo htmlspecialchars($username); ?>" required />
-                    <label for="floating_outlined"
+                        placeholder="Username" value="<?php echo htmlspecialchars($username); ?>" required 
+                        pattern="[A-Za-z0-9]+"
+                        title="Solo se permiten letras y números, sin espacios"
+                        oninput="this.value = this.value.replace(/[^A-Za-z0-9]/g, '')"/>
+                    <label for="username"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Username
                     </label>
@@ -176,10 +190,10 @@ $conn->close();
 
                 <!-- Campo Password -->
                 <div id="input" class="relative">
-                    <input type="text" id="floating_outlined" name="password"
+                    <input type="password" id="password" name="password"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Contraseña" />
-                    <label for="floating_outlined"
+                        placeholder="Contraseña"/>
+                    <label for="password"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Contraseña
                     </label>
@@ -187,10 +201,12 @@ $conn->close();
 
                 <!-- Campo Correo Electrónico -->
                 <div id="input" class="relative">
-                    <input type="text" id="floating_outlined" name="correo"
+                    <input type="email" id="correo" name="correo"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Correo Electrónico" value="<?php echo htmlspecialchars($correo); ?>" required />
-                    <label for="floating_outlined"
+                        placeholder="Correo Electrónico" value="<?php echo htmlspecialchars($correo); ?>" required 
+                        pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+                        title="Ingrese un correo válido (ej. usuario@dominio.com)"/>
+                    <label for="correo"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Correo Electrónico
                     </label>
@@ -198,10 +214,14 @@ $conn->close();
 
                 <!-- Campo Número de Teléfono -->
                 <div id="input" class="relative">
-                    <input type="text" id="floating_outlined" name="telefono"
+                    <input type="tel" id="telefono" name="telefono"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Número de Teléfono" value="<?php echo htmlspecialchars($telefono); ?>" required />
-                    <label for="floating_outlined"
+                        placeholder="Número de Teléfono" value="<?php echo htmlspecialchars($telefono); ?>" required 
+                        pattern="[0-9]{9}"
+                        maxlength="9"
+                        title="El teléfono debe tener exactamente 9 dígitos"
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)"/>
+                    <label for="telefono"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Número de Teléfono
                     </label>
@@ -225,5 +245,29 @@ $conn->close();
             </div>
         </form>
     </div>
+
+    <script>
+    // Validación adicional para asegurar que los campos cumplan con los requisitos
+    document.addEventListener("DOMContentLoaded", function() {
+        // Validar nombre y apellidos (solo letras y espacios)
+        document.getElementById('nombre').addEventListener('input', function() {
+            this.value = this.value.replace(/[^A-Za-z\s]/g, '');
+        });
+        
+        document.getElementById('apellidos').addEventListener('input', function() {
+            this.value = this.value.replace(/[^A-Za-z\s]/g, '');
+        });
+        
+        // Validar username (solo letras y números)
+        document.getElementById('username').addEventListener('input', function() {
+            this.value = this.value.replace(/[^A-Za-z0-9]/g, '');
+        });
+        
+        // Validar teléfono (solo números, máximo 9 dígitos)
+        document.getElementById('telefono').addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
+        });
+    });
+    </script>
 </body>
 </html>

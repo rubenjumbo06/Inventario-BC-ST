@@ -132,6 +132,21 @@ if ($_SESSION['role'] !== 'admin') {
 						</svg>
 						Estado
 					</a>
+                    <!-- Tabla Entradas -->
+                    <a href="entradas.php" class="flex items-center px-6 py-4 text-gray-100 hover:bg-[var(--verdes)] group <?php echo ($current_page == 'entradas.php') ? 'active-menu-item' : ''; ?>">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="group-hover:hidden h-6 w-6 mr-2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 0 0 2 2h6M8 7V5a2 2 0 0 1 2-2h4.586a1 1 0 0 1 .707.293l4.414 4.414a1 1 0 0 1 .293.707V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2" />
+                        </svg>
+                        Entradas
+                    </a>
+
+                    <!-- Tabla Salidas -->
+                    <a href="salidas.php" class="flex items-center px-6 py-4 text-gray-100 hover:bg-[var(--verdes)] group <?php echo ($current_page == 'salidas.php') ? 'active-menu-item' : ''; ?>">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="group-hover:hidden h-6 w-6 mr-2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M18 12H6" />
+                        </svg>
+                        Salidas
+                    </a>
 					<!-- Técnico -->
 					<a href="tecnico.php" class="flex items-center px-6 py-4 text-gray-100 hover:bg-[var(--verdes)] group <?php echo ($current_page == 'tecnico.php') ? 'active-menu-item' : ''; ?>">
 						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="group-hover:hidden h-6 w-6 mr-2">

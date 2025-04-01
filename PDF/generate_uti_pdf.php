@@ -1,68 +1,101 @@
 <?php
-session_start(); 
-require('../fpdf/fpdf.php');
-require('../conexion.php');
+session_start();
+require_once("../fpdf/fpdf.php");
+require_once("../conexion.php");
 
-    class PDF extends FPDF {
-        function Header() {
-            $image_path = __DIR__ . '/../assets/img/fondopdf.jpeg';
-            if (!file_exists($image_path)) {
-                die("Error: La imagen de fondo no existe en $image_path");
-            }
+// Obtener el filtro de búsqueda desde el formulario POST
+$filter_search = isset($_POST['filter_search']) && !empty($_POST['filter_search']) ? $_POST['filter_search'] : null;
 
-            $this->Image($image_path, 98.5, 65, 100, 80); // Centrar fondo
-            $this->Image(__DIR__ . '/../assets/img/logo.png', 15, 10, 25);
-
-            $this->SetFont('Arial', 'B', 24);
-            $this->SetY(20);
-            $this->Cell(0, 20, 'Reporte de Utilidad', 0, 1, 'C');
-            $this->Ln(5);
+class PDF extends FPDF {
+    function Header() {
+        $image_path = __DIR__ . '/../assets/img/fondopdf.jpeg';
+        if (!file_exists($image_path)) {
+            die("Error: La imagen de fondo no existe en $image_path");
         }
-        
-        function Footer() {
-            $this->SetY(-15);
-            $this->SetFont('Arial', 'I', 8);
-            $this->SetX($this->GetPageWidth() / 2 - 10);
-            $this->Cell(20, 10, 'Pagina ' . $this->PageNo(), 0, 0, 'C');
-        }
+
+        $this->Image($image_path, 98.5, 65, 100, 80);
+        $this->Image(__DIR__ . '/../assets/img/logo.png', 15, 10, 25);
+
+        $this->SetFont('Arial', 'B', 24);
+        $this->SetY(20);
+        $this->Cell(0, 20, 'Reporte de Utilidad', 0, 1, 'C');
+        $this->Ln(5);
     }
+    
+    function Footer() {
+        $this->SetY(-15);
+        $this->SetFont('Arial', 'I', 8);
+        $this->SetX($this->GetPageWidth() / 2 - 10);
+        $this->Cell(20, 10, 'Pagina ' . $this->PageNo(), 0, 0, 'C');
+    }
+}
 
-    $pdf = new PDF('L');
-    $pdf->AddPage();
+$pdf = new PDF('L');
+$pdf->AddPage();
 
-    $pdf->SetFont('Arial', 'B', 10);
-    $pdf->SetFillColor(50, 168, 82);
-    $pdf->SetTextColor(255);
+$pdf->SetFont('Arial', 'B', 10);
+$pdf->SetFillColor(50, 168, 82);
+$pdf->SetTextColor(255);
 
-    // Ancho total de la tabla
-    $tableWidth = 20 + 60 + 75;
-    $pageWidth = $pdf->GetPageWidth();
-    $startX = ($pageWidth - $tableWidth) / 2;
+// Configuración de columnas
+$widths = [
+    'id' => 15,
+    'nombre' => 70,
+    'descripcion' => 150
+];
+$tableWidth = array_sum($widths);
+$startX = ($pdf->GetPageWidth() - $tableWidth) / 2;
+$pdf->SetX($startX);
+
+// Encabezado
+$pdf->Cell($widths['id'], 10, 'ID', 1, 0, 'C', true);
+$pdf->Cell($widths['nombre'], 10, 'Nombre', 1, 0, 'C', true);
+$pdf->Cell($widths['descripcion'], 10, 'Descripción', 1, 1, 'C', true);
+
+$pdf->SetFont('Arial', '', 10);
+$pdf->SetTextColor(0);
+
+// Construir la consulta SQL con filtro en nombre y descripción
+$sql = "SELECT id_utilidad, nombre_utilidad, descripcion 
+        FROM tbl_utilidad 
+        WHERE 1=1";
+$params = [];
+$types = "";
+
+if ($filter_search) {
+    $sql .= " AND (nombre_utilidad LIKE ? OR descripcion LIKE ?)";
+    $params[] = "%$filter_search%";
+    $params[] = "%$filter_search%";
+    $types .= "ss";
+}
+
+// Preparar y ejecutar la consulta
+$stmt = $conn->prepare($sql);
+if (!$stmt) {
+    die("Error en la preparación de la consulta: " . $conn->error);
+}
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
+$stmt->execute();
+$result = $stmt->get_result();
+
+// Generar filas manteniendo el estilo de tabla
+while ($row = $result->fetch_assoc()) {
     $pdf->SetX($startX);
+    $pdf->Cell($widths['id'], 10, $row['id_utilidad'], 1, 0, 'C');
+    $pdf->Cell($widths['nombre'], 10, utf8_decode($row['nombre_utilidad']), 1, 0, 'C');
+    $pdf->Cell($widths['descripcion'], 10, utf8_decode($row['descripcion']), 1, 1, 'C');
+}
 
-    // Encabezado
-    $pdf->Cell(20, 10, 'ID', 1, 0, 'C', true);
-    $pdf->Cell(60, 10, 'Nombre', 1, 0, 'C', true);
-    $pdf->Cell(75, 10, 'Descrcipcion', 1, 1, 'C', true);
+// Cerrar statement y conexión
+$stmt->close();
+$conn->close();
 
-    $pdf->SetFont('Arial', '', 10);
-    $pdf->SetTextColor(0);
-
-    $sql = "SELECT * FROM tbl_utilidad";
-    $result = $conn->query($sql);
-
-    while ($row = $result->fetch_assoc()) {
-        $pdf->SetX($startX);
-        $pdf->Cell(20, 10, $row['id_utilidad'], 1, 0, 'C');
-        $pdf->Cell(60, 10, utf8_decode($row['nombre_utilidad']), 1, 0, 'C');
-        $pdf->Cell(75, 10, utf8_decode($row['descripcion']), 1, 1, 'C');
-    }
-
- // Forzar la descarga del PDF
+// Forzar la descarga del PDF
 header('Content-Type: application/pdf');
 header('Content-Disposition: attachment; filename="reporte_utilidades.pdf"');
 header('Cache-Control: max-age=0');
-
-$pdf->Output('F', 'php://output'); // Enviar el PDF al navegador para descarga
+$pdf->Output('D', 'reporte_utilidades.pdf');
 exit();
 ?>

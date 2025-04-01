@@ -26,8 +26,16 @@ if (isset($_GET['id_estado']) && is_numeric($_GET['id_estado'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Obtener los valores del formulario
-    $nombre_estado = $_POST['nombre_estado'] ?? null;
-    $descripcion = $_POST['descripcion'] ?? null;
+    $nombre_estado = trim($_POST['nombre_estado'] ?? '');
+    $descripcion = trim($_POST['descripcion'] ?? '');
+
+    // Validaciones en el backend
+    if (!empty($nombre_estado) && !preg_match("/^[a-zA-Z0-9\s]+$/", $nombre_estado)) {
+        die("El nombre del estado solo puede contener letras, números y espacios.");
+    }
+    if (!empty($descripcion) && !preg_match("/^[a-zA-Z0-9\s]+$/", $descripcion)) {
+        die("La descripción solo puede contener letras, números y espacios.");
+    }
 
     // Construir la consulta SQL dinámicamente
     $sql = "UPDATE tbl_estados SET ";
@@ -45,6 +53,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $types .= "s";
     }
 
+    // Si no hay campos para actualizar
+    if (empty($params)) {
+        echo "<script>alert('No se realizaron cambios'); window.location.href='../pages/Admin/estados.php';</script>";
+        exit();
+    }
+
     // Eliminar la última coma y espacio
     $sql = rtrim($sql, ", ");
 
@@ -55,6 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Preparar y ejecutar la consulta
     $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        die("Error al preparar la consulta: " . $conn->error);
+    }
     $stmt->bind_param($types, ...$params);
 
     if ($stmt->execute()) {
@@ -96,7 +113,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div id="input" class="relative">
                     <input type="text" id="nombre_estado" name="nombre_estado" value="<?= htmlspecialchars($estado['nombre_estado']) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Nombre del Estado"/>
+                        placeholder="Nombre del Estado"
+                        pattern="[A-Za-z0-9\s]+"
+                        title="Solo se permiten letras, números y espacios"/>
                     <label for="nombre_estado"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
                         Nombre del Estado
@@ -107,10 +126,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div id="input" class="relative">
                     <textarea id="descripcion" name="descripcion"
                         class="block w-full text-sm px-4 py-2 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-auto resize-none"
-                        placeholder="Descripción" required
-                        oninput="autoResize(this)"><?php echo htmlspecialchars($descripcion); ?></textarea>
+                        placeholder="Descripción"
+                        oninput="autoResize(this); this.value = this.value.replace(/[^a-zA-Z0-9\s]/g, '');"><?php echo htmlspecialchars($descripcion); ?></textarea>
                     <label for="descripcion"
-                        class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
+                        class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
                         Descripción
                     </label>
                 </div>
@@ -131,18 +150,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </form>
     </div>
+
     <script>
+    // Función para ajustar la altura del textarea
     function autoResize(textarea) {
-        // Reset the height to auto to recalculate the height
         textarea.style.height = 'auto';
-        // Set the height to the scrollHeight (content height)
-        textarea.style.height = textarea.scrollHeight + 'px';
+        textarea.style.height = Math.max(textarea.scrollHeight, 50) + 'px'; // Altura mínima de 50px
     }
 
-    // Apply auto-resize when the page loads (in case there's pre-filled content)
+    // Validación para campos de texto (solo letras, números y espacios)
+    function validarTexto(input) {
+        input.value = input.value.replace(/[^a-zA-Z0-9\s]/g, '');
+    }
+
+    // Aplicar validaciones y auto-resize al cargar la página
     document.addEventListener("DOMContentLoaded", function () {
+        // Configuración para nombre_estado
+        const nombreInput = document.getElementById('nombre_estado');
+        nombreInput.addEventListener("input", function() {
+            validarTexto(this);
+        });
+
+        // Configuración para descripción
         const textarea = document.getElementById('descripcion');
-        autoResize(textarea);
+        if (textarea) {
+            autoResize(textarea); // Ajuste inicial
+            if (textarea.value) {
+                textarea.dispatchEvent(new Event('input')); // Ajustar label si hay contenido
+            }
+        }
     });
     </script>
 </body>

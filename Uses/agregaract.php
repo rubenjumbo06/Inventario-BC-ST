@@ -213,6 +213,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </form>
     </div>
     <script>
+    // Validación del campo cantidad (solo números enteros)
+    function validarCantidad(input) {
+        // Elimina cualquier carácter que no sea un dígito
+        input.value = input.value.replace(/\D/g, '');
+        // Asegura que el valor esté dentro del rango permitido
+        if (input.value > 9999) input.value = 9999;
+        if (input.value < 1 && input.value !== '') input.value = 1;
+    }
+
+    // Validación para nombre (solo letras, números y espacios)
+    function validarNombre(input) {
+        input.value = input.value.replace(/[^a-zA-Z0-9\s.]/g, '');
+    }
+
+    // Validación para IP, MAC y SN (letras, números, puntos y dos puntos)
+    function validarCampoTecnico(input) {
+        input.value = input.value.replace(/[^a-zA-Z0-9:.]/g, '');
+    }
+
+    // Cargar datos dinámicamente y asignar validaciones
     document.addEventListener("DOMContentLoaded", function() {
         async function cargarDatos(endpoint, selectId, placeholder, isUbicacion = false) {
             try {
@@ -225,17 +245,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 select.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
                 
                 if (isUbicacion) {
-                    // Manejo especial para ubicaciones (array simple)
                     data.forEach((item, index) => {
                         const option = document.createElement("option");
-                        option.value = index + 1; // Asignamos IDs numéricos
+                        option.value = index + 1;
                         option.textContent = item;
                         select.appendChild(option);
                     });
                 } else {
-                    // Manejo normal para otros endpoints (objetos con id y nombre)
                     if (!Array.isArray(data)) throw new Error('Datos no válidos');
-                    
                     data.forEach(item => {
                         const option = document.createElement("option");
                         option.value = item.id || item.id_empresa || item.id_estado;
@@ -254,7 +271,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         cargarDatos("get_empresas.php", "empresa_select", "Selecciona una Empresa");
         cargarDatos("get_estados.php", "estado_select", "Selecciona un Estado");
         cargarDatos("get_ubicacion.php", "ubicacion_select", "Selecciona una Ubicación", true);
+
+        // Asignar validaciones a los campos
+        document.getElementById('nombre_activos').addEventListener('input', function() {
+            validarNombre(this);
+        });
+        document.getElementById('IP').addEventListener('input', function() {
+            validarCampoTecnico(this);
+        });
+        document.getElementById('MAC').addEventListener('input', function() {
+            validarCampoTecnico(this);
+        });
+        document.getElementById('SN').addEventListener('input', function() {
+            validarCampoTecnico(this);
+        });
+        document.getElementById('cantidad_activos').addEventListener('input', function() {
+            validarCantidad(this);
+        });
     });
-    </script>
+</script>
 </body>
 </html>

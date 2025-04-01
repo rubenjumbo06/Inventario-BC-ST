@@ -7,37 +7,48 @@ $mensaje = "";
 
 // Procesar el formulario cuando se envíe
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $nombre_herramientas = htmlspecialchars($_POST['nombre_herramientas']);
-    $cantidad_herramientas = htmlspecialchars($_POST['cantidad_herramientas']);
-    $id_empresa = intval($_POST['id_empresa']); // Guardar ID
-    $estado_herramientas = intval($_POST['estado_herramientas']); // Guardar ID
-    $utilidad_herramientas = intval($_POST['utilidad_herramientas']); // Guardar ID
-    $ubicacion_herramientas = htmlspecialchars($_POST['ubicacion_herramientas']);
-
-    if (!empty($nombre_herramientas) && !empty($cantidad_herramientas) && !empty($id_empresa) && !empty($estado_herramientas) && !empty($utilidad_herramientas) && !empty($ubicacion_herramientas)) {
-        $sql = "INSERT INTO tbl_herramientas (nombre_herramientas, cantidad_herramientas, id_empresa, estado_herramientas, utilidad_herramientas, ubicacion_herramientas) VALUES (?, ?, ?, ?, ?, ?)";
-        
-        if ($stmt = $conn->prepare($sql)) {
-            $stmt->bind_param("ssiiis", $nombre_herramientas, $cantidad_herramientas, $id_empresa, $estado_herramientas, $utilidad_herramientas, $ubicacion_herramientas);
-            
-            if ($stmt->execute()) {
-                // Verificar el rol del usuario
-                if ($_SESSION['role'] == 'admin') {
-                    header("Location: ../pages/Admin/herramientas.php");
-                } else {
-                    header("Location: ../pages/Usuario/herramientas.php");
-                }
-                exit(); // Asegúrate de salir del script después de la redirección
-            } else {
-                echo "Error al actualizar la herramienta: " . $stmt->error;
-            }
-
-            $stmt->close();
+    // Validar nombre primero (solo letras y espacios)
+    if (!empty($_POST['nombre_herramientas'])) {
+        if (!preg_match('/^[A-Za-zÁ-Úá-úñÑ\s]+$/', $_POST['nombre_herramientas'])) {
+            $mensaje = "El nombre solo puede contener letras y espacios";
         } else {
-            $mensaje = "Error al preparar la consulta: " . $conn->error;
+            $nombre_herramientas = htmlspecialchars($_POST['nombre_herramientas']);
         }
     } else {
-        $mensaje = "Todos los campos son obligatorios.";
+        $mensaje = "El nombre es obligatorio";
+    }
+
+    // Solo continuar si el nombre es válido
+    if (empty($mensaje)) {
+        $cantidad_herramientas = htmlspecialchars($_POST['cantidad_herramientas']);
+        $id_empresa = intval($_POST['id_empresa']);
+        $estado_herramientas = intval($_POST['estado_herramientas']);
+        $utilidad_herramientas = intval($_POST['utilidad_herramientas']);
+        $ubicacion_herramientas = htmlspecialchars($_POST['ubicacion_herramientas']);
+
+        if (!empty($cantidad_herramientas) && !empty($id_empresa) && !empty($estado_herramientas) && !empty($utilidad_herramientas) && !empty($ubicacion_herramientas)) {
+            $sql = "INSERT INTO tbl_herramientas (nombre_herramientas, cantidad_herramientas, id_empresa, estado_herramientas, utilidad_herramientas, ubicacion_herramientas) VALUES (?, ?, ?, ?, ?, ?)";
+            
+            if ($stmt = $conn->prepare($sql)) {
+                $stmt->bind_param("ssiiis", $nombre_herramientas, $cantidad_herramientas, $id_empresa, $estado_herramientas, $utilidad_herramientas, $ubicacion_herramientas);
+                
+                if ($stmt->execute()) {
+                    if ($_SESSION['role'] == 'admin') {
+                        header("Location: ../pages/Admin/herramientas.php");
+                    } else {
+                        header("Location: ../pages/Usuario/herramientas.php");
+                    }
+                    exit();
+                } else {
+                    $mensaje = "Error al actualizar la herramienta: " . $stmt->error;
+                }
+                $stmt->close();
+            } else {
+                $mensaje = "Error al preparar la consulta: " . $conn->error;
+            }
+        } else {
+            $mensaje = "Todos los campos son obligatorios.";
+        }
     }
 }
 ?>
@@ -71,14 +82,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="mb-10 text-green-500"><?php echo $mensaje; ?></div>
         <?php endif; ?>
 
-        <form action="agregarherr.php" method="POST">
-
+        <form id="formHerramienta" action="agregarherr.php" method="POST">
             <div class="grid grid-cols-2 gap-6 mb-10">
                 <!-- Nombre -->
                 <div id="input" class="relative">
                     <input type="text" id="nombre_herramientas" name="nombre_herramientas"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Nombre" value="<?php echo $nombre_herramientas; ?>" required />
+                        placeholder="Nombre" 
+                        value="<?php echo htmlspecialchars($nombre_herramientas); ?>" 
+                        required pattern="[A-Za-zÁ-Úá-úñÑ\s]+"
+                        title="Solo se permiten letras y espacios" oninput="validarSoloLetras(this)"
+                        onkeydown="return validarTeclaLetras(event)">
                     <label for="nombre"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Nombre
@@ -86,10 +100,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 </div>
 
                 <!-- Cantidad -->
-                <div id="input" class="relative">
+                <div class="relative">
                     <input type="number" id="cantidad_herramientas" name="cantidad_herramientas"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Cantidad" value="<?php echo $cantidad_herramientas; ?>" required />
+                        min="1" max="9999" step="1"
+                        placeholder="Cantidad" value="<?php echo htmlspecialchars($cantidad_herramientas); ?>" 
+                        required 
+                        onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+                        oninput="validarCantidad(this)"/>
                     <label for="cantidad"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Cantidad
@@ -169,33 +187,92 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 
     <script>
-    document.addEventListener("DOMContentLoaded", function () {
-    function cargarDatos(endpoint, selectId) {
-        fetch(endpoint)
-            .then(response => response.json())
-            .then(data => {
-                if (!Array.isArray(data)) {
-                    console.error("Error: Respuesta no válida", data);
-                    return;
-                }
-
-                let select = document.getElementById(selectId);
-                select.innerHTML = '<option value="" disabled selected>Selecciona una Empresa</option>';
-
-                data.forEach(item => {
-                    let option = document.createElement("option");
-                    option.value = item.id_empresa || item.id_estado || item.id_utilidad;
-                    option.textContent = item.nombre || item.nombre_estado || item.nombre_utilidad;
-                    select.appendChild(option);
-                });
-            })
-            .catch(error => console.error("Error cargando los datos:", error));
+    // Validación para solo letras (incluye acentos y ñ)
+    function validarSoloLetras(input) {
+        // Elimina caracteres no permitidos
+        const valorOriginal = input.value;
+        const valorLimpio = valorOriginal.replace(/[^A-Za-zÁ-Úá-úñÑ\s]/g, '');
+        
+        // Solo actualizar si hubo cambios para evitar problemas con el cursor
+        if (valorOriginal !== valorLimpio) {
+            input.value = valorLimpio;
+        }
+        
+        // Convertir a mayúscula la primera letra de cada palabra
+        input.value = input.value.toLowerCase().replace(/\b\w/g, function(letra) {
+            return letra.toUpperCase();
+        });
     }
+
+    // Validación al presionar teclas
+    function validarTeclaLetras(event) {
+        const tecla = event.key;
+        const permitidas = /^[A-Za-zÁ-Úá-úñÑ\s]$/;
+        
+        // Permitir teclas de control
+        if (event.ctrlKey || event.altKey || event.metaKey) return true;
+        if ([8, 9, 13, 16, 17, 18, 19, 20, 27, 33, 34, 35, 36, 37, 38, 39, 40, 45, 46].includes(event.keyCode)) return true;
+        
+        // Rechazar si no es una letra permitida
+        if (!permitidas.test(tecla)) {
+            event.preventDefault();
+            return false;
+        }
+        return true;
+    }
+
+    // Validación del campo cantidad
+    function validarCantidad(input) {
+        input.value = input.value.replace(/[^0-9]/g, '');
+        if (input.value > 9999) input.value = 9999;
+        if (input.value < 1) input.value = 1;
+    }
+
+    // Validación del formulario completo
+    document.getElementById('formHerramienta').addEventListener('submit', function(e) {
+        const nombre = document.getElementById('nombre_herramientas');
+        if (!/^[A-Za-zÁ-Úá-úñÑ\s]+$/.test(nombre.value)) {
+            alert('El nombre solo puede contener letras y espacios');
+            nombre.focus();
+            e.preventDefault();
+            return;
+        }
+        
+        const cantidad = document.getElementById('cantidad_herramientas');
+        if (cantidad.value <= 0 || cantidad.value > 9999 || isNaN(cantidad.value)) {
+            alert('La cantidad debe ser un número entre 1 y 9999');
+            cantidad.focus();
+            e.preventDefault();
+        }
+    });
+
+    document.addEventListener("DOMContentLoaded", function() {
+        function cargarDatos(endpoint, selectId) {
+            fetch(endpoint)
+                .then(response => response.json())
+                .then(data => {
+                    if (!Array.isArray(data)) {
+                        console.error("Error: Respuesta no válida", data);
+                        return;
+                    }
+
+                    let select = document.getElementById(selectId);
+                    select.innerHTML = '<option value="" disabled selected>Selecciona una Empresa</option>';
+
+                    data.forEach(item => {
+                        let option = document.createElement("option");
+                        option.value = item.id_empresa || item.id_estado || item.id_utilidad;
+                        option.textContent = item.nombre || item.nombre_estado || item.nombre_utilidad;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => console.error("Error cargando los datos:", error));
+        }
 
         cargarDatos("get_empresas.php", "empresa_select");
         cargarDatos("get_estados.php", "estado_select");
         cargarDatos("get_utilidades.php", "utilidad_select");
-        });
+    });
     </script>
 </body>
 </html>

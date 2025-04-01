@@ -42,9 +42,10 @@ $conn->close();
             <div class="md:w-2/3 md:pl-8">
                 <h2 class="text-xl font-semibold text-[#22694c] dark:text-[#22694c] mb-4">Permisos de Usuario</h2>
                 <p class="text-gray-700 dark:text-gray-300 mb-6 text-justify">
-                    Como <?php echo htmlspecialchars($user['role']); ?> del sistema de gestión de inventarios, tienes acceso a 2 funciones clave del sistema, 
-                    lo que te permite gestionar eficientemente los productos y operaciones establecidas. Entre estos se destaca el poder agregar y 
-                    editar productos del inventario únicamente de la tabla Consumibles y reporte de la base de datos.
+                Como <?php echo htmlspecialchars($user['role']); ?> dentro del sistema de gestión de inventarios. Tu rol te autoriza a visualizar la información de la tabla "Consumibles", "Entradas" y "Salidas" y el reporte 
+                correspondiente en la base de datos. Además, tienes la capacidad de registrar entradas y salidas de productos cuando realizas una instalación, asegurando un control adecuado del stock. 
+                Asimismo, puedes exportar los datos en formatos PDF y Excel para su consulta y análisis. Cabe destacar que no cuentas con permisos para agregar ni editar productos dentro del inventario. 
+
                 </p>
                 <h2 class="text-xl font-semibold text-[#22694c] dark:text-[#22694c] mb-4">Tablas Disponibles</h2>
                 <div class="flex flex-wrap gap-2 mb-6">

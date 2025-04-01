@@ -7,10 +7,14 @@ if (!isset($_SESSION['id_user'])) {
 }
 
 try {
-    // Verificar la conexión
     if ($conn->connect_error) {
         throw new Exception("Error de conexión: " . $conn->connect_error);
     }
+
+    $activo = [];
+    $id_empresa_selected = '';
+    $estado_activos_selected = '';
+    $ubicacion_activos_selected = '';
 
     if (isset($_GET['id_activos']) && is_numeric($_GET['id_activos'])) {
         $id_activos = intval($_GET['id_activos']);
@@ -28,16 +32,14 @@ try {
             throw new Exception("Activo no encontrado.");
         }
 
-        // Pasar los valores a la vista
-        $id_empresa_selected = $activo['id_empresa'];
-        $estado_activos_selected = $activo['estado_activos'];
-        $ubicacion_activos_selected = $activo['ubicacion_activos'];
+        $id_empresa_selected = $activo['id_empresa'] ?? '';
+        $estado_activos_selected = $activo['estado_activos'] ?? '';
+        $ubicacion_activos_selected = $activo['ubicacion_activos'] ?? '';
     } else {
         throw new Exception("ID inválido.");
     }
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Obtener los valores del formulario
         $nombre_activos = $_POST['nombre_activos'] ?? null;
         $cantidad_activos = $_POST['cantidad_activos'] ?? null;
         $estado_activos = $_POST['estado_activos'] ?? null;
@@ -47,7 +49,6 @@ try {
         $SN = $_POST['SN'] ?? null;
         $ubicacion_activos = $_POST['ubicacion_activos'] ?? null;
 
-        // Validación de longitud de campos
         if (strlen($MAC) > 20) {
             throw new Exception("La dirección MAC no puede exceder los 20 caracteres.");
         }
@@ -57,8 +58,19 @@ try {
         if (strlen($SN) > 30) {
             throw new Exception("El número de serie (SN) no puede exceder los 30 caracteres.");
         }
+        if (!empty($cantidad_activos) && !preg_match('/^\d+$/', $cantidad_activos)) {
+            throw new Exception("La cantidad debe ser un número entero positivo sin símbolos.");
+        }
+        if (!empty($IP) && !preg_match('/^[a-zA-Z0-9:.]+$/', $IP)) {
+            throw new Exception("La dirección IP solo puede contener letras, números, ':' y '.'.");
+        }
+        if (!empty($MAC) && !preg_match('/^[a-zA-Z0-9:.]+$/', $MAC)) {
+            throw new Exception("La dirección MAC solo puede contener letras, números, ':' y '.'.");
+        }
+        if (!empty($SN) && !preg_match('/^[a-zA-Z0-9:.]+$/', $SN)) {
+            throw new Exception("El número de serie (SN) solo puede contener letras, números, ':' y '.'.");
+        }
 
-        // Construir la consulta SQL dinámicamente
         $sql = "UPDATE tbl_activos SET ";
         $params = [];
         $types = "";
@@ -105,7 +117,6 @@ try {
         }
 
         $sql = rtrim($sql, ", ");
-
         $sql .= " WHERE id_activos=?";
         $params[] = $id_activos;
         $types .= "i";
@@ -127,7 +138,8 @@ try {
         }
     }
 } catch (Exception $e) {
-    echo "<script>alert('" . addslashes($e->getMessage()) . "');</script>";
+    echo "<script>alert('" . addslashes($e->getMessage()) . "'); window.location.href='../pages/Admin/activos.php';</script>";
+    exit;
 }
 ?>
 
@@ -148,32 +160,150 @@ try {
             }
             return true;
         }
-        // Función mejorada de autoajuste
-        function autoResize(textarea) {
-            // Reset height to calculate new height properly
-            textarea.style.height = 'auto';
-            // Set new height (with minimum of 1 line)
-            textarea.style.height = Math.max(textarea.scrollHeight, 50) + 'px'; // 50px es la altura mínima
+
+        function soloNumeros(input) {
+            input.value = input.value.replace(/[^0-9]/g, '');
         }
 
-        // Inicialización al cargar la página
+        function soloAlfanumericoPuntosDosPuntos(input) {
+            input.value = input.value.replace(/[^a-zA-Z0-9:.]/g, '');
+        }
+
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.max(textarea.scrollHeight, 50) + 'px';
+        }
+
         document.addEventListener("DOMContentLoaded", function() {
             const textarea = document.getElementById('nombre_activos');
             if (textarea) {
-                // Ajuste inicial
                 autoResize(textarea);
-                
-                // Disparar evento input si hay contenido para ajustar el label flotante
                 if (textarea.value) {
                     textarea.dispatchEvent(new Event('input'));
                 }
             }
         });
+
+        function validarLongitudes() {
+            const mac = document.getElementById('MAC');
+            const ip = document.getElementById('IP');
+            const sn = document.getElementById('SN');
+            const cantidad = document.getElementById('cantidad_activos');
+            
+            if (mac.value.length > 20) {
+                alert('La dirección MAC no puede exceder los 20 caracteres');
+                return false;
+            }
+            if (ip.value.length > 20) {
+                alert('La dirección IP no puede exceder los 20 caracteres');
+                return false;
+            }
+            if (sn.value.length > 30) {
+                alert('El número de serie (SN) no puede exceder los 30 caracteres');
+                return false;
+            }
+            if (cantidad.value && !/^\d+$/.test(cantidad.value)) {
+                alert('La cantidad debe ser un número entero positivo sin símbolos');
+                return false;
+            }
+            if (ip.value && !/^[a-zA-Z0-9:.]+$/.test(ip.value)) {
+                alert("La dirección IP solo puede contener letras, números, ':' y '.'");
+                return false;
+            }
+            if (mac.value && !/^[a-zA-Z0-9:.]+$/.test(mac.value)) {
+                alert("La dirección MAC solo puede contener letras, números, ':' y '.'");
+                return false;
+            }
+            if (sn.value && !/^[a-zA-Z0-9:.]+$/.test(sn.value)) {
+                alert("El número de serie (SN) solo puede contener letras, números, ':' y '.'");
+                return false;
+            }
+            return true;
+        }
+
+        document.addEventListener("DOMContentLoaded", async function () {
+            async function cargarDatos(endpoint, selectId, selectedValue) {
+                console.log(`Cargando datos para ${selectId} desde ${endpoint} con valor seleccionado: ${selectedValue}`);
+                try {
+                    const response = await fetch(endpoint);
+                    if (!response.ok) {
+                        throw new Error(`Error en la solicitud a ${endpoint}: ${response.statusText}`);
+                    }
+                    const data = await response.json();
+                    console.log(`Datos recibidos para ${selectId}:`, data);
+
+                    if (!Array.isArray(data)) {
+                        throw new Error(`Respuesta no válida para ${selectId}: se esperaba un array`);
+                    }
+
+                    const select = document.getElementById(selectId);
+                    if (!select) {
+                        throw new Error(`No se encontró el elemento con ID: ${selectId}`);
+                    }
+
+                    let placeholderText = "";
+                    switch (selectId) {
+                        case "empresa_select":
+                            placeholderText = "Selecciona una Empresa";
+                            break;
+                        case "estado_select":
+                            placeholderText = "Selecciona un Estado";
+                            break;
+                        case "ubicacion_select":
+                            placeholderText = "Selecciona una Ubicación";
+                            break;
+                        default:
+                            placeholderText = "Selecciona una opción";
+                    }
+                    select.innerHTML = `<option value="" disabled>${placeholderText}</option>`;
+
+                    data.forEach(item => {
+                        const option = document.createElement("option");
+                        if (selectId === "empresa_select") {
+                            option.value = item.id_empresa;
+                            option.textContent = item.nombre;
+                        } else if (selectId === "estado_select") {
+                            option.value = item.id_estado;
+                            option.textContent = item.nombre_estado;
+                        } else if (selectId === "ubicacion_select") {
+                            option.value = item;
+                            option.textContent = item;
+                        }
+                        if (String(option.value) === String(selectedValue)) {
+                            option.selected = true;
+                        }
+                        select.appendChild(option);
+                    });
+
+                    if (!select.querySelector(`option[value="${selectedValue}"]`)) {
+                        console.warn(`El valor seleccionado "${selectedValue}" no está en las opciones de ${selectId}`);
+                    }
+                } catch (error) {
+                    console.error(`Error cargando datos para ${selectId}:`, error);
+                    alert(`Error cargando datos para ${selectId}: ${error.message}`);
+                }
+            }
+
+            const id_empresa_selected = "<?= $id_empresa_selected ?>";
+            const estado_activos_selected = "<?= $estado_activos_selected ?>";
+            const ubicacion_activos_selected = "<?= $ubicacion_activos_selected ?>";
+
+            console.log("Valores seleccionados:", {
+                id_empresa_selected,
+                estado_activos_selected,
+                ubicacion_activos_selected
+            });
+
+            await cargarDatos("../Uses/get_empresas.php", "empresa_select", id_empresa_selected);
+            await cargarDatos("../Uses/get_estados.php", "estado_select", estado_activos_selected);
+            await cargarDatos("../Uses/get_ubicacion.php", "ubicacion_select", ubicacion_activos_selected);
+        });
     </script>
 </head>
 <body class="flex items-center justify-center h-screen bg-gray-100">
+    <?php if (!empty($activo)): ?>
     <div class="p-10 rounded-lg shadow-lg">
-    <form method="POST" onsubmit="return validarLongitudes()">
+        <form method="POST" onsubmit="return validarLongitudes()">
             <div class="grid grid-cols-2 gap-6 mb-10">
                 <!-- Nombre -->
                 <div id="input" class="relative">
@@ -189,10 +319,11 @@ try {
 
                 <!-- Cantidad -->
                 <div id="input" class="relative">
-                    <input type="number" id="cantidad_activos" name="cantidad_activos" value="<?= htmlspecialchars($activo['cantidad_activos']) ?>"
+                    <input type="text" id="cantidad_activos" name="cantidad_activos" value="<?= htmlspecialchars($activo['cantidad_activos']) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Cantidad"/>
-                    <label for="cantidad"
+                        placeholder="Cantidad" pattern="[0-9]+" 
+                        oninput="soloNumeros(this)" title="Solo se permiten números enteros positivos"/>
+                    <label for="cantidad_activos"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         Cantidad
                     </label>
@@ -202,10 +333,8 @@ try {
                 <div id="input" class="relative">
                     <select name="estado_activos" id="estado_select" class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-hidden pr-[48px]">
                         <option value="" disabled>Selecciona un Estado</option>
-                        <!-- Opciones de estado cargadas dinámicamente -->
                     </select>
-                    <label
-                        for="floating_outlined"
+                    <label for="estado_select"
                         class="absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
                         Estado
                     </label>
@@ -215,10 +344,8 @@ try {
                 <div id="input" class="relative">
                     <select name="id_empresa" id="empresa_select" class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-hidden pr-[48px]">
                         <option value="" disabled>Selecciona una Empresa</option>
-                        <!-- Opciones de empresa cargadas dinámicamente -->
                     </select>
-                    <label
-                        for="floating_outlined"
+                    <label for="empresa_select"
                         class="absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
                         Empresa
                     </label>
@@ -228,8 +355,9 @@ try {
                 <div id="input" class="relative">
                     <input type="text" id="IP" name="IP" value="<?= htmlspecialchars($activo['IP']) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="IP" maxlength="20"
-                        oninput="return limitarLongitud(this, 20)"/>
+                        placeholder="IP" maxlength="20" pattern="[a-zA-Z0-9:.]+"
+                        oninput="soloAlfanumericoPuntosDosPuntos(this); return limitarLongitud(this, 20)"
+                        title="Solo letras, números, ':' y '.' (máx 20 caracteres)"/>
                     <label for="IP"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         IP (max 20 caracteres)
@@ -240,8 +368,9 @@ try {
                 <div id="input" class="relative">
                     <input type="text" id="MAC" name="MAC" value="<?= htmlspecialchars($activo['MAC']) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="MAC" maxlength="20"
-                        oninput="return limitarLongitud(this, 20)"/>
+                        placeholder="MAC" maxlength="20" pattern="[a-zA-Z0-9:.]+"
+                        oninput="soloAlfanumericoPuntosDosPuntos(this); return limitarLongitud(this, 20)"
+                        title="Solo letras, números, ':' y '.' (máx 20 caracteres)"/>
                     <label for="MAC"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         MAC (max 20 caracteres)
@@ -252,8 +381,9 @@ try {
                 <div id="input" class="relative">
                     <input type="text" id="SN" name="SN" value="<?= htmlspecialchars($activo['SN']) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="SN" maxlength="30"
-                        oninput="return limitarLongitud(this, 30)"/>
+                        placeholder="SN" maxlength="30" pattern="[a-zA-Z0-9:.]+"
+                        oninput="soloAlfanumericoPuntosDosPuntos(this); return limitarLongitud(this, 30)"
+                        title="Solo letras, números, ':' y '.' (máx 30 caracteres)"/>
                     <label for="SN"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
                         SN (max 30 caracteres)
@@ -266,20 +396,17 @@ try {
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-hidden pr-[48px]">
                         <option value="" disabled>Selecciona una Ubicación</option>
                     </select>
-                    <label
-                        for="floating_outlined"
+                    <label for="ubicacion_select"
                         class="absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
                         Ubicación
                     </label>
                 </div>
             </div>
             <div class="sm:flex sm:flex-row-reverse flex gap-4">
-                <!-- Botón Guardar -->
                 <button type="submit"
                     class="w-fit rounded-lg text-sm px-6 py-3 h-[50px] border border-[var(--verde-oscuro)] bg-[var(--verde-claro)] text-white font-semibold shadow-md hover:bg-green-900 transition-all duration-300">
                     <div class="flex gap-2 items-center">Actualizar</div>
                 </button>
-                <!-- Botón Cancelar -->
                 <button type="reset"
                     class="w-fit rounded-lg text-sm px-6 py-3 h-[50px] border border-[var(--verde-oscuro)] text-[var(--verde-oscuro)] font-semibold shadow-md hover:bg-red-500 hover:text-white transition-all duration-300"
                     onclick="window.history.back();">
@@ -288,98 +415,10 @@ try {
             </div>
         </form>
     </div>
-
-    <script>
-        // Función para limitar la longitud de los campos
-
-        function limitarLongitud(input, maxLength) {
-                    if (input.value.length > maxLength) {
-                        alert(`No puedes escribir más de ${maxLength} caracteres en este campo`);
-                        input.value = input.value.substring(0, maxLength);
-                        return false;
-                    }
-                    return true;
-        }
-
-        // Función para validar longitudes antes de enviar el formulario
-        function validarLongitudes() {
-            const mac = document.getElementById('MAC');
-            const ip = document.getElementById('IP');
-            const sn = document.getElementById('SN');
-            
-            if (mac.value.length > 20) {
-                alert('La dirección MAC no puede exceder los 20 caracteres');
-                return false;
-            }
-            
-            if (ip.value.length > 20) {
-                alert('La dirección IP no puede exceder los 20 caracteres');
-                return false;
-            }
-            
-            if (sn.value.length > 30) {
-                alert('El número de serie (SN) no puede exceder los 30 caracteres');
-                return false;
-            }
-            
-            return true;
-        }
-
-        document.addEventListener("DOMContentLoaded", function () {
-        async function cargarDatos(endpoint, selectId, selectedValue) {
-            try {
-                let response = await fetch(endpoint);
-                if (!response.ok) {
-                    throw new Error(`Error en la solicitud: ${response.statusText}`);
-                }
-                let data = await response.json();
-                if (!Array.isArray(data)) {
-                    throw new Error("Respuesta no válida");
-                }
-
-                let select = document.getElementById(selectId);
-                let placeholderText = "";
-                switch (selectId) {
-                    case "empresa_select":
-                        placeholderText = "Selecciona una Empresa";
-                        break;
-                    case "estado_select":
-                        placeholderText = "Selecciona un Estado";
-                        break;
-                    case "ubicacion_select":
-                        placeholderText = "Selecciona una Ubicación";
-                        break;
-                    default:
-                        placeholderText = "Selecciona una opción";
-                }
-                // Limpiar y agregar el texto predeterminado
-                select.innerHTML = `<option value="" disabled selected>${placeholderText}</option>`;
-
-                data.forEach(item => {
-                    let option = document.createElement("option");
-                    option.value = item.id_empresa || item.id_estado || item; // Para ubicación, item es el valor del ENUM
-                    option.textContent = item.nombre || item.nombre_estado || item; // Para ubicación, item es el valor del ENUM
-                    if (option.value == selectedValue) {
-                        option.selected = true;
-                    }
-                    select.appendChild(option);
-                });
-            } catch (error) {
-                console.error("Error cargando los datos:", error);
-                alert("Error cargando los datos: " + error.message);
-            }
-        }
-
-        // Obtener los valores seleccionados desde PHP
-        let id_empresa_selected = "<?= $id_empresa_selected ?>";
-        let estado_activos_selected = "<?= $estado_activos_selected ?>";
-        let ubicacion_activos_selected = "<?= $ubicacion_activos_selected ?>";
-
-        // Cargar los datos y seleccionar el valor correcto
-        cargarDatos("get_empresas.php", "empresa_select", id_empresa_selected);
-        cargarDatos("get_estados.php", "estado_select", estado_activos_selected);
-        cargarDatos("get_ubicacion.php", "ubicacion_select", ubicacion_activos_selected);
-    });
-    </script>
+    <?php else: ?>
+    <div class="p-10 rounded-lg shadow-lg text-red-500">
+        No se encontraron datos para editar.
+    </div>
+    <?php endif; ?>
 </body>
 </html>

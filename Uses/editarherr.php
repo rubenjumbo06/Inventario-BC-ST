@@ -121,9 +121,7 @@ try {
         <div class="flex flex-wrap gap-5 items-center w-full max-md:max-w-full mb-10">
             <div class="flex flex-wrap flex-1 shrink gap-5 items-center self-stretch my-auto basis-0 min-w-[240px] max-md:max-w-full">
                 <div class="flex flex-col self-stretch my-auto min-w-[240px]">
-                    <strong>
-                        <div class="text-base text-[var(--verde-oscuro)]">Editar Herramienta</div>
-                    </strong>
+                    <div class="text-base text-[var(--verde-oscuro)]">Editar Herramienta</div>
                     <div class="mt-2 text-sm text-[var(--verde-oscuro)]">
                         Editando tabla: Herramientas
                     </div>
@@ -133,11 +131,12 @@ try {
 
         <form method="POST">
             <div class="grid grid-cols-2 gap-6 mb-10">
-                <!-- Nombre -->
+                <!-- Nombre (ahora como textarea) -->
                 <div id="input" class="relative">
-                    <input type="text" id="nombre_herramientas" name="nombre_herramientas" value="<?= htmlspecialchars($herramienta['nombre_herramientas']) ?>"
-                        class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Nombre"/>
+                    <textarea id="nombre_herramientas" name="nombre_herramientas"
+                        class="block w-full text-sm px-4 py-2 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-auto resize-none"
+                        placeholder="Nombre"
+                        oninput="autoResize(this)"><?= htmlspecialchars($herramienta['nombre_herramientas']) ?></textarea>
                     <label for="nombre_herramientas"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
                         Nombre
@@ -224,7 +223,23 @@ try {
     </div>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
+    // Validación para texto (solo letras, números y espacios)
+    function validarTexto(input) {
+        input.value = input.value.replace(/[^a-zA-Z0-9\s]/g, '');
+    }
+
+    // Validación para cantidad (solo números)
+    function validarCantidad(input) {
+        input.value = input.value.replace(/\D/g, ''); // Elimina todo lo que no sea dígito
+    }
+
+    // Función para autoajustar el tamaño del textarea
+    function autoResize(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
         async function cargarDatos(endpoint, selectId, selectedValue) {
             try {
                 let response = await fetch(endpoint);
@@ -282,6 +297,19 @@ try {
         cargarDatos("get_empresas.php", "empresa_select", id_empresa_selected);
         cargarDatos("get_estados.php", "estado_select", estado_herramientas_selected);
         cargarDatos("get_utilidades.php", "utilidad_select", utilidad_herramientas_selected);
+
+        // Aplicar validaciones y autoajuste
+        const nombreTextarea = document.getElementById('nombre_herramientas');
+        autoResize(nombreTextarea); // Ajustar tamaño al cargar la página
+
+        nombreTextarea.addEventListener('input', function() {
+            validarTexto(this);
+            autoResize(this); // Ajustar tamaño después de la validación
+        });
+
+        document.getElementById('cantidad_herramientas').addEventListener('input', function() {
+            validarCantidad(this);
+        });
     });
     </script>
 </body>

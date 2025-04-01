@@ -8,7 +8,7 @@ if ($conn->connect_error) {
 
 if (isset($_GET['id_user']) && is_numeric($_GET['id_user'])) {
     $id_user = intval($_GET['id_user']);
-    $sql = "SELECT * FROM tbl_users WHERE id_user = ?"; // Cambiado a tbl_users
+    $sql = "SELECT * FROM tbl_users WHERE id_user = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $id_user);
     $stmt->execute();
@@ -24,16 +24,33 @@ if (isset($_GET['id_user']) && is_numeric($_GET['id_user'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Obtener los valores del formulario
-    $nombre = $_POST['nombre'] ?? null;
-    $apellidos = $_POST['apellidos'] ?? null;
-    $username = $_POST['username'] ?? null;
-    $password = $_POST['password'] ?? null; // Cambiado a 'password'
-    $role = $_POST['role'] ?? null;
-    $correo = $_POST['correo'] ?? null;
-    $telefono = $_POST['telefono'] ?? null;
+    $nombre = trim($_POST['nombre'] ?? '');
+    $apellidos = trim($_POST['apellidos'] ?? '');
+    $username = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $role = $_POST['role'] ?? '';
+    $correo = trim($_POST['correo'] ?? '');
+    $telefono = trim($_POST['telefono'] ?? '');
+
+    // Validaciones en el backend
+    if (!empty($nombre) && !preg_match("/^[a-zA-Z0-9\s]+$/", $nombre)) {
+        die("El nombre solo puede contener letras, números y espacios.");
+    }
+    if (!empty($apellidos) && !preg_match("/^[a-zA-Z0-9\s]+$/", $apellidos)) {
+        die("Los apellidos solo pueden contener letras, números y espacios.");
+    }
+    if (!empty($username) && !preg_match("/^[a-zA-Z0-9\s]+$/", $username)) {
+        die("El username solo puede contener letras, números y espacios.");
+    }
+    if (!empty($telefono) && (!preg_match("/^[0-9]{9}$/", $telefono))) {
+        die("El teléfono debe contener exactamente 9 dígitos numéricos.");
+    }
+    if (!empty($correo) && !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+        die("El correo no tiene un formato válido.");
+    }
 
     // Construir la consulta SQL dinámicamente
-    $sql = "UPDATE tbl_users SET "; // Cambiado a tbl_users
+    $sql = "UPDATE tbl_users SET ";
     $params = [];
     $types = "";
 
@@ -53,9 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $types .= "s";
     }
     if (!empty($password)) {
-        // Convertir la contraseña a hash usando bcrypt
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-        $sql .= "password=?, "; // Cambiado a 'password'
+        $sql .= "password=?, ";
         $params[] = $hashed_password;
         $types .= "s";
     }
@@ -77,11 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Agregar fecha_modificacion con la hora actual
     $sql .= "fecha_modificacion=CURRENT_TIMESTAMP, ";
-
-    // Eliminar la última coma y espacio
     $sql = rtrim($sql, ", ");
-
-    // Agregar la condición WHERE
     $sql .= " WHERE id_user=?";
     $params[] = $id_user;
     $types .= "i";
@@ -101,7 +113,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-
 
 <!DOCTYPE html>
 <html lang="es">
@@ -133,7 +144,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div id="input" class="relative">
                     <input type="text" id="nombre" name="nombre" value="<?= htmlspecialchars($user['nombre']) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Nombre"/>
+                        placeholder="Nombre"
+                        pattern="[A-Za-z0-9\s]+"
+                        title="Solo se permiten letras, números y espacios"/>
                     <label for="nombre"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
                         Nombre
@@ -144,7 +157,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div id="input" class="relative">
                     <input type="text" id="apellidos" name="apellidos" value="<?= htmlspecialchars($user['apellidos']) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Apellidos"/>
+                        placeholder="Apellidos"
+                        pattern="[A-Za-z0-9\s]+"
+                        title="Solo se permiten letras, números y espacios"/>
                     <label for="apellidos"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
                         Apellidos
@@ -155,7 +170,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div id="input" class="relative">
                     <input type="text" id="username" name="username" value="<?= htmlspecialchars($user['username']) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Username"/>
+                        placeholder="Username"
+                        pattern="[A-Za-z0-9\s]+"
+                        title="Solo se permiten letras, números y espacios"/>
                     <label for="username"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
                         Username
@@ -192,7 +209,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div id="input" class="relative">
                     <input type="email" id="correo" name="correo" value="<?= htmlspecialchars($user['correo']) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Correo"/>
+                        placeholder="Correo"
+                        pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+                        title="Ingrese un correo válido (ej. usuario@dominio.com)"/>
                     <label for="correo"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
                         Correo
@@ -201,12 +220,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <!-- Teléfono -->
                 <div id="input" class="relative">
-                    <input type="text" id="telefono" name="telefono" value="<?= htmlspecialchars($user['telefono']) ?>"
+                    <input type="tel" id="telefono" name="telefono" value="<?= htmlspecialchars($user['telefono']) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Teléfono"/>
+                        placeholder="Teléfono (9 dígitos)"
+                        pattern="[0-9]{9}"
+                        maxlength="9"
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)"
+                        title="Solo se permiten 9 dígitos numéricos"/>
                     <label for="telefono"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
-                        Teléfono
+                        Teléfono (9 dígitos)
                     </label>
                 </div>
             </div>
@@ -226,5 +249,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </form>
     </div>
+
+    <script>
+    // Validación para campos de texto (solo letras, números y espacios)
+    function validarTexto(input) {
+        input.value = input.value.replace(/[^a-zA-Z0-9\s]/g, '');
+    }
+
+    // Validación para correo (formato de email válido)
+    function validarCorreo(input) {
+        input.value = input.value.replace(/[^a-zA-Z0-9@._-]/g, '');
+    }
+
+    // Aplicar validaciones al cargar la página
+    document.addEventListener("DOMContentLoaded", function () {
+        // Validación para nombre
+        document.getElementById('nombre').addEventListener('input', function() {
+            validarTexto(this);
+        });
+
+        // Validación para apellidos
+        document.getElementById('apellidos').addEventListener('input', function() {
+            validarTexto(this);
+        });
+
+        // Validación para username
+        document.getElementById('username').addEventListener('input', function() {
+            validarTexto(this);
+        });
+
+        // Validación para correo
+        document.getElementById('correo').addEventListener('input', function() {
+            validarCorreo(this);
+        });
+
+        // Validación para teléfono (ya está en el HTML con oninput)
+    });
+    </script>
 </body>
 </html>

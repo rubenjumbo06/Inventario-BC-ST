@@ -54,11 +54,6 @@ try {
         if (!preg_match('/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\.,;:¿?¡!\-]+$/', $titulo)) {
             throw new Exception("El título solo puede contener letras y signos básicos de puntuación.");
         }
-        
-        if (!preg_match('/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\.,;:¿?¡!\-]+$/', $body)) {
-            throw new Exception("La descripción solo puede contener letras y signos básicos de puntuación.");
-        }
-
         // Actualizar solo los campos editables
         $sql = "UPDATE tbl_reg_entradas SET titulo=?, body=? WHERE id_entradas=?";
         $stmt = $conn->prepare($sql);

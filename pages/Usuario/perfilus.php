@@ -47,9 +47,11 @@ $conn->close();
             <div class="md:w-2/3 md:pl-8">
                 <h2 class="text-xl font-semibold text-[#22694c] dark:text-[#22694c] mb-4">Permisos de Usuario</h2>
                 <p class="text-gray-700 dark:text-gray-300 mb-6 text-justify">
-                    Como <?php echo htmlspecialchars($user['role']); ?> del sistema de gestión de inventarios, tienes acceso a 2 funciones clave del sistema, 
-                    lo que te permite gestionar eficientemente los productos y operaciones establecidas. Entre estos se destaca el poder agregar y 
-                    editar productos del inventario, así como acceso a 3 de las tablas y reportes de la base de datos.
+                Como <?php echo htmlspecialchars($user['role']); ?> del sistema de gestión de inventarios, tienes acceso exclusivo a la visualización de información contenida en tres tablas 
+                de la base de datos. Además, puedes descargar reportes en formato PDF y Excel de dichas tablas para facilitar la consulta y el análisis de datos de manera eficiente.  
+                Es importante destacar que tu rol no permite la edición, eliminación ni adición de productos al inventario, garantizando así la integridad de la información registrada. 
+                Esta función está diseñada para proporcionarte un acceso seguro y controlado a los datos relevantes sin alterar la estructura ni el contenido del sistema.  
+
                 </p>
                 <h2 class="text-xl font-semibold text-[#22694c] dark:text-[#22694c] mb-4">Tablas Disponibles</h2>
                 <div class="flex flex-wrap gap-2 mb-6">

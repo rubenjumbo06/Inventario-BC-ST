@@ -59,6 +59,13 @@ try {
             throw new Exception("Error al guardar los datos: " . $stmt->error);
         }
     }
+    
+    $nombre = isset($_POST['nombre_tecnico']) ? trim($_POST['nombre_tecnico']) : '';
+
+    if (!preg_match('/^[A-Za-zÁ-Úá-ú\s]+$/', $nombre)) {
+        // Mostrar error si no cumple con el patrón
+        $errores[] = "El nombre solo puede contener letras y espacios";
+    }
 } catch (Exception $e) {
     $_SESSION['error'] = $e->getMessage();
     // Limpiar buffer y redirigir
@@ -103,7 +110,11 @@ ob_end_flush();
             <div class="grid grid-cols-2 gap-6 mb-10">
                 <!-- Nombre -->
                 <div id="input" class="relative">
-                    <input type="text" id="nombre_tecnico" name="nombre_tecnico" value="<?= htmlspecialchars($nombre_tecnico) ?>"
+                    <input type="text" id="nombre_tecnico" name="nombre_tecnico" 
+                        value="<?= htmlspecialchars($nombre_tecnico) ?>"
+                        pattern="[A-Za-zÁ-Úá-ú\s]+"
+                        title="Solo se permiten letras y espacios"
+                        oninput="validarSoloLetras(this)"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
                         placeholder="Nombre" required />
                     <label for="nombre_tecnico"
@@ -113,35 +124,49 @@ ob_end_flush();
                 </div>
  
                 <!-- DNI -->
-                <div id="input" class="relative">
-                    <input type="text" id="dni_tecnico" name="dni_tecnico" value="<?= htmlspecialchars($dni_tecnico) ?>"
-                        class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="DNI" required />
+                <div class="relative">
+                    <input type="text" id="dni_tecnico" name="dni_tecnico" 
+                    value="<?= htmlspecialchars($dni_tecnico) ?>"
+                    class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
+                    placeholder="DNI" 
+                    required 
+                    maxlength="8"
+                    pattern="[0-9]{8}"
+                    onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+                    oninput="validarDNI(this)"/>
                     <label for="dni_tecnico"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
-                        DNI
+                        DNI (8 dígitos)
                     </label>
                 </div>
 
                 <!-- Edad -->
                 <div id="input" class="relative">
-                    <input type="number" id="edad_tecnico" name="edad_tecnico" value="<?= htmlspecialchars($edad_tecnico) ?>"
+                    <input type="number" id="edad_tecnico" name="edad_tecnico" 
+                        value="<?= htmlspecialchars($edad_tecnico) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Edad" required min="18" max="99" />
+                        placeholder="Edad" required 
+                        min="17" max="99" maxlength="2"
+                        oninput="this.value=this.value.slice(0,2); if(this.value<17)this.value=17; if(this.value>99)this.value=99"
+                        onkeypress="return event.charCode >= 48 && event.charCode <= 57">
                     <label for="edad_tecnico"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
-                        Edad
+                        Edad (17-99)
                     </label>
                 </div>
 
                 <!-- Número de Teléfono -->
-                <div id="input" class="relative">
-                    <input type="tel" id="num_telef" name="num_telef" value="<?= htmlspecialchars($num_telef) ?>"
+                <div class="relative">
+                    <input type="tel" id="num_telef" name="num_telef" 
+                        value="<?= htmlspecialchars($num_telef) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Número de Teléfono" required pattern="[0-9]{9,15}" />
+                        placeholder="Número de Teléfono" required 
+                        pattern="[0-9]{9}" maxlength="9"
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)"
+                        onkeypress="return event.charCode >= 48 && event.charCode <= 57">
                     <label for="num_telef"
                         class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
-                        Número de Teléfono
+                        Número de Teléfono (9 dígitos)
                     </label>
                 </div>
             </div>
@@ -162,5 +187,55 @@ ob_end_flush();
             </div>
         </form>
     </div>
+    <script>
+    function validarSoloLetras(input) {
+    // Expresión regular que permite letras (mayúsculas y minúsculas), espacios y acentos
+    input.value = input.value.replace(/[^A-Za-zÁ-Úá-ú\s]/g, '');
+    
+    // Opcional: convertir primera letra de cada palabra a mayúscula
+    input.value = input.value.replace(/\b\w/g, l => l.toUpperCase());
+    }
+        
+    // Validación del campo DNI (8 dígitos)
+    function validarDNI(input) {
+        // Elimina cualquier carácter que no sea número
+        input.value = input.value.replace(/[^0-9]/g, '');
+        
+        // Limita a 8 dígitos
+        input.value = input.value.slice(0, 8);
+    }
+
+    // Validación del formulario completo
+    document.querySelector('form').addEventListener('submit', function(e) {
+        // Validación de DNI
+        const dniInput = document.getElementById('dni_tecnico');
+        if (dniInput.value.length !== 8) {
+            alert('El DNI debe tener exactamente 8 dígitos');
+            dniInput.focus();
+            e.preventDefault();
+            return;
+        }
+
+        // Validación de edad
+        const edadInput = document.getElementById('edad_tecnico');
+        const edad = parseInt(edadInput.value);
+        if (isNaN(edad) || edad < 17 || edad > 99) {
+            alert('La edad debe ser un número entre 17 y 99 años');
+            edadInput.focus();
+            e.preventDefault();
+            return;
+        }
+
+        // Validación de teléfono
+        const telefonoInput = document.getElementById('num_telef');
+        if (telefonoInput.value.length !== 9) {
+            alert('El teléfono debe tener exactamente 9 dígitos');
+            telefonoInput.focus();
+            e.preventDefault();
+            return;
+        }
+    });
+</script>
+
 </body>
 </html>

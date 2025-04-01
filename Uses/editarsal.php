@@ -51,17 +51,13 @@ try {
         $Destino = trim($_POST['Destino'] ?? '');
         $body = trim($_POST['body'] ?? '');
         
-        // Validar que solo contengan texto (letras, espacios y algunos caracteres básicos)
-        if (!preg_match('/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\.,;:¿?¡!\-]+$/', $titulo)) {
-            throw new Exception("El título solo puede contener letras y signos básicos de puntuación.");
+        // Validaciones más permisivas
+        if (!preg_match('/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\.,;:¿?¡!\-\(\)\/]+$/', $titulo)) {
+            throw new Exception("El título contiene caracteres no permitidos.");
         }
         
-        if (!preg_match('/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\.,;:¿?¡!\-]+$/', $Destino)) {
-            throw new Exception("El destino solo puede contener letras y signos básicos de puntuación.");
-        }
-
-        if (!preg_match('/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\.,;:¿?¡!\-]+$/', $body)) {
-            throw new Exception("El cuerpo solo puede contener letras y signos básicos de puntuación.");
+        if (!preg_match('/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\.,;:¿?¡!\-\(\)\/]+$/', $Destino)) {
+            throw new Exception("El destino contiene caracteres no permitidos.");
         }
 
         // Actualizar solo los campos editables
@@ -91,13 +87,13 @@ try {
     <link rel="stylesheet" href="../assets/CSS/agg.css">
     <script>
         function validarTexto(input) {
-            // Permite letras, espacios, acentos y signos básicos de puntuación
-            input.value = input.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s\.,;:¿?¡!\-]/g, '');
+            // Permite letras, números, espacios, acentos y signos básicos de puntuación
+            input.value = input.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\.,;:¿?¡!\-\(\)\/]/g, '');
         }
     </script>
 </head>
 <body class="flex items-center justify-center h-screen bg-gray-100">
-    <div class="p-10 rounded-lg shadow-lg">
+    <div class="p-10 rounded-lg shadow-lg bg-white">
         <div class="flex flex-wrap gap-5 items-center w-full max-md:max-w-full mb-10">
             <div class="flex flex-wrap flex-1 shrink gap-5 items-center self-stretch my-auto basis-0 min-w-[240px] max-md:max-w-full">
                 <div class="flex flex-col self-stretch my-auto min-w-[240px]">
@@ -117,8 +113,8 @@ try {
             </div>
         <?php endif; ?>
 
-        <form method="POST">
-            <div class="grid grid-cols-2 gap-6 mb-10">
+        <form method="POST" class="mb-4">
+            <div class="grid grid-cols-2 gap-6 mb-6">
                 <!-- Items (solo lectura) -->
                 <div id="input" class="relative">
                     <input type="text" id="items" name="items" 
@@ -184,20 +180,25 @@ try {
                 </div>
             </div>
 
-            <div class="sm:flex sm:flex-row-reverse flex gap-4">
+            <div class="flex justify-end gap-4">
                 <!-- Botón Guardar -->
                 <button type="submit"
                     class="w-fit rounded-lg text-sm px-6 py-3 h-[50px] border border-[var(--verde-oscuro)] bg-[var(--verde-claro)] text-white font-semibold shadow-md hover:bg-green-900 transition-all duration-300">
                     <div class="flex gap-2 items-center">Actualizar</div>
                 </button>
-                <!-- Botón Cancelar -->
-                <button type="button"
-                    class="w-fit rounded-lg text-sm px-6 py-3 h-[50px] border border-[var(--verde-oscuro)] text-[var(--verde-oscuro)] font-semibold shadow-md hover:bg-red-500 hover:text-white transition-all duration-300"
-                    onclick="window.history.back();">
-                    <div class="flex gap-2 items-center">Cancelar</div>
-                </button>
             </div>
         </form>
+
+        <!-- Botón Cancelar FUERA del formulario -->
+        <div class="flex justify-end">
+            <a href="<?php echo isset($_SESSION['role']) ? 
+                ($_SESSION['role'] == 'admin' ? '../pages/Admin/salidas.php' : 
+                ($_SESSION['role'] == 'user' ? '../pages/Usuario/salidas.php' : 
+                '../pages/Tecnico/salidas.php')) : '../pages/salidas.php'; ?>"
+                class="w-fit rounded-lg text-sm px-6 py-3 h-[50px] border border-[var(--verde-oscuro)] text-[var(--verde-oscuro)] font-semibold shadow-md hover:bg-red-500 hover:text-white transition-all duration-300 inline-flex items-center">
+                <div class="flex gap-2 items-center">Cancelar</div>
+            </a>
+        </div>
     </div>
 </body>
 </html>
