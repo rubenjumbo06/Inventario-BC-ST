@@ -50,7 +50,7 @@ $pdf->SetX($startX);
 // Encabezado
 $pdf->Cell($widths['id'], 10, 'ID', 1, 0, 'C', true);
 $pdf->Cell($widths['nombre'], 10, 'Nombre', 1, 0, 'C', true);
-$pdf->Cell($widths['descripcion'], 10, 'Descripción', 1, 1, 'C', true);
+$pdf->Cell($widths['descripcion'], 10, 'Descripcion', 1, 1, 'C', true);
 
 $pdf->SetFont('Arial', '', 10);
 $pdf->SetTextColor(0);

@@ -88,7 +88,6 @@ $users_result = $conn->query($users_sql);
             gap: 10px;
             margin-top: 20px;
         }
-        /* Estilos para los campos de búsqueda */
         .search-container {
             margin: 20px 0;
             text-align: center;
@@ -125,7 +124,6 @@ $users_result = $conn->query($users_sql);
             font-weight: bold;
             font-size: 14px;
         }
-        /* Estilos para el filtro desplegable */
         .filter-container {
             position: relative;
             display: inline-block;
@@ -167,13 +165,83 @@ $users_result = $conn->query($users_sql);
         .filter-dropdown.active {
             display: block;
         }
+        /* Estilos para los botones de acción */
+        .icon-btn {
+            background: none;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s ease;
+        }
+        .edit-icon-btn {
+            color: rgb(243, 126, 2);
+        }
+        .edit-icon-btn:hover {
+            color: rgb(163, 87, 5);
+            transform: scale(1.1);
+        }
+        .delete-icon-btn {
+            color: #dc3545;
+        }
+        .delete-icon-btn:hover {
+            color: #b02a37;
+            transform: scale(1.1);
+        }
+        /* Estilos para el modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .modal-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .confirmBtn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .confirmBtn:hover {
+            background-color: rgb(159, 38, 50);
+        }
+        .cancelBtn {
+            background-color: rgb(30, 172, 59);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .cancelBtn:hover {
+            background-color: rgb(23, 99, 23);
+        }
     </style>
 </head>
 <body class="bg-[var(--beige)]">
 <?php include '../header.php'; ?>
 <?php include 'sidebarad.php'; ?>
-
 <div class="main-content">
+<?php include '../../Uses/msg.php'; ?>
     <div class="flex justify-between items-center mt-4 px-4">
         <p class="text-white text-sm sm:text-lg text-shadow">
             <strong>User:</strong> <?php echo htmlspecialchars($_SESSION['username']); ?> 
@@ -239,20 +307,50 @@ $users_result = $conn->query($users_sql);
                 <tr>
                     <td><?php echo $row['id_salidas']; ?></td>
                     <td><?php echo $row['fecha_creacion']; ?></td>
-                    <td><?php echo $row['items']; ?></td>
-                    <td><?php echo $row['titulo']; ?></td>
-                    <td><?php echo $row['Destino']; ?></td>
-                    <td><?php echo $row['body']; ?></td>
-                    <td><?php echo $row['username']; ?></td>
+                    <td><?php echo htmlspecialchars($row['items']); ?></td>
+                    <td><?php echo htmlspecialchars($row['titulo']); ?></td>
+                    <td><?php echo htmlspecialchars($row['Destino']); ?></td>
+                    <td><?php echo htmlspecialchars($row['body']); ?></td>
+                    <td><?php echo htmlspecialchars($row['username']); ?></td>
                     <td>
                         <a href="../../Uses/editarsal.php?id_salidas=<?php echo $row['id_salidas']; ?>">
-                            <button class="editBtn">Editar</button>
+                            <button class="edit-icon-btn icon-btn" title="Editar">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+                                </svg>
+                            </button>
                         </a>
+                        <button class="delete-icon-btn icon-btn deleteBtn" 
+                                data-id="<?php echo $row['id_salidas']; ?>" 
+                                data-fecha="<?php echo $row['fecha_creacion']; ?>" 
+                                data-items="<?php echo htmlspecialchars($row['items']); ?>" 
+                                data-titulo="<?php echo htmlspecialchars($row['titulo']); ?>" 
+                                data-destino="<?php echo htmlspecialchars($row['Destino']); ?>" 
+                                data-body="<?php echo htmlspecialchars($row['body']); ?>" 
+                                data-usuario="<?php echo htmlspecialchars($row['username']); ?>"
+                                title="Eliminar">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z"/>
+                                </svg>
+                        </button>
                     </td>
                 </tr>
                 <?php endwhile; ?>
             </tbody>
         </table>  
+
+        <!-- Modal de confirmación -->
+        <div id="deleteModal" class="modal">
+            <div class="modal-content">
+                <h2>Confirmar Eliminación</h2>
+                <p>¿Estás seguro de que deseas eliminar esta salida?</p>
+                <div id="modalData"></div>
+                <div class="modal-buttons">
+                    <button id="confirmDelete" class="confirmBtn">Confirmar</button>
+                    <button id="cancelDelete" class="cancelBtn">Cancelar</button>
+                </div>
+            </div>
+        </div>
     </main>
 </div>
 
@@ -271,7 +369,7 @@ $users_result = $conn->query($users_sql);
             });
             const fechaHoraElemento = document.getElementById("fechaHora");
             if (fechaHoraElemento) {
-                fechaHoraElemento.textContent = Fecha/Hora Ingreso: ${fechaHoraFormateada};
+                fechaHoraElemento.textContent = `Fecha/Hora Ingreso: ${fechaHoraFormateada}`;
             }
         }
         actualizarFechaHora();
@@ -360,6 +458,75 @@ $users_result = $conn->query($users_sql);
                 document.querySelectorAll('.filter-dropdown').forEach(dropdown => {
                     dropdown.classList.remove('active');
                 });
+            }
+        });
+
+        // Funcionalidad del modal de eliminación
+        const modal = document.getElementById('deleteModal');
+        const modalData = document.getElementById('modalData');
+        const confirmDelete = document.getElementById('confirmDelete');
+        const cancelDelete = document.getElementById('cancelDelete');
+        let currentId = null;
+
+        document.querySelectorAll('.deleteBtn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                currentId = this.dataset.id;
+                const fecha = this.dataset.fecha;
+                const items = this.dataset.items;
+                const titulo = this.dataset.titulo;
+                const destino = this.dataset.destino;
+                const body = this.dataset.body;
+                const usuario = this.dataset.usuario;
+
+                modalData.innerHTML = `
+                    <p><strong>ID:</strong> ${currentId}</p>
+                    <p><strong>Fecha Creación:</strong> ${fecha}</p>
+                    <p><strong>Items:</strong> ${items}</p>
+                    <p><strong>Título:</strong> ${titulo}</p>
+                    <p><strong>Destino:</strong> ${destino}</p>
+                    <p><strong>Cuerpo:</strong> ${body}</p>
+                    <p><strong>Usuario:</strong> ${usuario}</p>
+                `;
+                modal.style.display = 'block';
+            });
+        });
+
+        cancelDelete.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+
+        confirmDelete.addEventListener('click', function() {
+            fetch('../../Uses/eliminarsal.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `id_salidas=${encodeURIComponent(currentId)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const rows = document.querySelectorAll('tbody tr');
+                    rows.forEach(row => {
+                        const idCell = row.querySelector('td:first-child');
+                        if (idCell && idCell.textContent === currentId) {
+                            row.remove();
+                        }
+                    });
+                    modal.style.display = 'none';
+                } else {
+                    alert('Error al eliminar la salida: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ocurrió un error al intentar eliminar la salida');
+            });
+        });
+
+        window.addEventListener('click', function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
             }
         });
     });

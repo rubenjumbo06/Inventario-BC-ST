@@ -39,7 +39,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         // Cerrar la sentencia y redirigir sin espera
         $stmt->close();
-        header("Location: ../pages/Admin/utilidad.php");
+        header("Location: ../pages/Admin/utilidad.php?action=added&table=utilidad");
         exit(); 
     } catch (Exception $e) {
         $mensaje = $e->getMessage();

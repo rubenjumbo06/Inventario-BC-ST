@@ -1,13 +1,10 @@
 <?php
 include '../conexion.php';
 session_start(); 
-// Inicializar variables del formulario
 $nombre_activos = $cantidad_activos = $estado_activos = $id_empresa = $IP = $MAC = $SN = $ubicacion_activos = "";
 $mensaje = "";
 
-// Procesar el formulario cuando se envíe
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Recoger los datos del formulario y sanitizar
     $nombre_activos = htmlspecialchars($_POST['nombre_activos']);
     $cantidad_activos = htmlspecialchars($_POST['cantidad_activos']);
     $estado_activos = intval($_POST['estado_activos']);
@@ -17,17 +14,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $SN = htmlspecialchars($_POST['SN']);
     $ubicacion_activos = intval($_POST['ubicacion_activos']);
 
-    // Validar ubicación primero
     if ($ubicacion_activos < 1 || $ubicacion_activos > 5) {
         echo "<script>alert('Ubicación no válida.');</script>";
         exit;
     }
-    $ubicaciones_validas = [1, 2, 3, 4, 5]; // Estos deben coincidir con los índices del ENUM
+    $ubicaciones_validas = [1, 2, 3, 4, 5];
     if (!in_array($ubicacion_activos, $ubicaciones_validas)) {
         echo "<script>alert('Ubicación no válida.');</script>";
         exit;
     }
-    // Validar longitud de los campos
     if (strlen($MAC) > 20) {
         echo "<script>alert('El campo MAC no puede tener más de 20 caracteres.');</script>";
         exit;
@@ -41,7 +36,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit;
     }
 
-    // Continuar con la inserción si las validaciones pasan
     if (!empty($nombre_activos) && !empty($cantidad_activos) && !empty($estado_activos) && !empty($id_empresa) && !empty($ubicacion_activos)) {
         $sql = "INSERT INTO tbl_activos (nombre_activos, cantidad_activos, estado_activos, id_empresa, IP, MAC, SN, ubicacion_activos) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         if ($stmt = $conn->prepare($sql)) {
@@ -49,17 +43,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                              $id_empresa, $IP, $MAC, $SN, $ubicacion_activos);
             
             if ($stmt->execute()) {
-                // Verificar el rol del usuario
+                // Solo redirección para admin
                 if ($_SESSION['role'] == 'admin') {
-                    header("Location: ../pages/Admin/activos.php");
-                } else {
-                    header("Location: ../pages/Usuario/activos.php");
+                    header("Location: ../pages/Admin/activos.php?action=added&table=activos");
+                    exit();
                 }
-                exit(); // Asegúrate de salir del script después de la redirección
             } else {
                 echo "Error al actualizar la herramienta: " . $stmt->error;
             }
-
             $stmt->close();
         } else {
             $mensaje = "Error al preparar la consulta: " . $conn->error;
@@ -76,7 +67,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agregar Datos</title>
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../assets/CSS/agg.css">
 </head>

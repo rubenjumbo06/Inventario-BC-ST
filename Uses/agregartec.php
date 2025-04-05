@@ -53,7 +53,7 @@ try {
             $_SESSION['success'] = 'Técnico agregado correctamente';
             // Limpiar buffer y redirigir inmediatamente
             ob_end_clean();
-            header("Location: ../pages/Admin/tecnico.php");
+            header("Location: ../pages/Admin/tecnico.php?action=added&table=tecnico");
             exit();
         } else {
             throw new Exception("Error al guardar los datos: " . $stmt->error);

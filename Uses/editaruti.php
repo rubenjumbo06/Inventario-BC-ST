@@ -77,14 +77,6 @@ try {
                 $types .= "s";
             }
 
-            // Si no hay campos para actualizar
-            if (empty($updates)) {
-                $_SESSION['message'] = 'No se realizaron cambios';
-                ob_end_clean();
-                header("Location: ../pages/Admin/utilidad.php");
-                exit();
-            }
-
             $sql .= implode(", ", $updates);
             $sql .= " WHERE id_utilidad = ?";
             $params[] = $id_utilidad;
@@ -98,10 +90,10 @@ try {
             
             $stmt->bind_param($types, ...$params);
             
+            // Reemplazar ambas redirecciones con este código consistente:
             if ($stmt->execute()) {
-                $_SESSION['success'] = 'Utilidad actualizada correctamente';
                 ob_end_clean();
-                header("Location: ../pages/Admin/utilidad.php");
+                header("Location: ../pages/Admin/utilidad.php?action=updated&table=utilidad");
                 exit();
             } else {
                 throw new Exception("Error al actualizar la utilidad: " . $stmt->error);

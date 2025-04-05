@@ -2,17 +2,20 @@
 require_once("../conexion.php");
 session_start();
 
-// Función para redirección basada en rol
-function redirectBasedOnRole() {
-    if (isset($_SESSION['role'])) {
-        $role = $_SESSION['role'];
-        $page = ($role == 'admin') ? '../pages/Admin/entradas.php' : 
-                (($role == 'user') ? '../pages/Usuario/entradas.php' : 
-                '../pages/Tecnico/entradas.php');
-        header("Location: " . $page);
-        exit();
+// Verificar la sesión y permitir solo admin y técnico
+if (!isset($_SESSION['id_user']) || !in_array($_SESSION['role'], ['admin', 'tecnico'])) {
+    header('Location: ../login.php');
+    exit();
+}
+
+// Función para redirección basada en rol (solo admin y técnico)
+function redirectBasedOnRole($action = '') {
+    $role = $_SESSION['role'];
+    $page = ($role == 'admin') ? "../pages/Admin/entradas.php" : "../pages/Tecnico/entradas.php";
+    if ($action) {
+        $page .= "?action=$action&table=entradas";
     }
-    header("Location: ../pages/entradas.php");
+    header("Location: $page");
     exit();
 }
 
@@ -60,8 +63,8 @@ try {
         $stmt->bind_param("ssi", $titulo, $body, $id_entradas);
 
         if ($stmt->execute()) {
-            $_SESSION['mensaje'] = "Entrada actualizada correctamente";
-            redirectBasedOnRole();
+            // Redirigir con parámetros para la notificación
+            redirectBasedOnRole('updated');
         } else {
             throw new Exception("Error al actualizar la entrada: " . $stmt->error);
         }

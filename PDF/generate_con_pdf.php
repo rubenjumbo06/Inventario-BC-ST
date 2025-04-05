@@ -1,5 +1,5 @@
 <?php
-session_start(); 
+session_start();
 require('../fpdf/fpdf.php');
 require('../conexion.php');
 
@@ -26,16 +26,41 @@ class PDF extends FPDF {
     }
 }
 
-// Función específica solo para comillas
 function fixQuotes($text) {
-    // Solo reemplazar comillas "elegantes" por comillas simples y dobles estándar
     $replacements = [
-        '“' => '"', // Comilla doble izquierda
-        '”' => '"', // Comilla doble derecha
-        '‘' => "'", // Comilla simple izquierda
-        '’' => "'"  // Comilla simple derecha
+        '“' => '"', '”' => '"', '‘' => "'", '’' => "'"
     ];
     return strtr($text, $replacements);
+}
+
+// Obtener filtros del formulario
+$filter_empresa = isset($_POST['filter_empresa']) ? $_POST['filter_empresa'] : '';
+$filter_estado = isset($_POST['filter_estado']) ? $_POST['filter_estado'] : '';
+$filter_utilidad = isset($_POST['filter_utilidad']) ? $_POST['filter_utilidad'] : '';
+$filter_usuario = isset($_POST['filter_usuario']) ? $_POST['filter_usuario'] : '';
+$filter_search = isset($_POST['filter_search']) ? $_POST['filter_search'] : '';
+
+// Construir la consulta con filtros
+$sql = "SELECT c.id_consumibles, c.nombre_consumibles, c.cantidad_consumibles, 
+        e.nombre AS nombre_empresa, es.nombre_estado, u.nombre_utilidad, c.fecha_ingreso, us.nombre AS nombre_usuario
+        FROM tbl_consumibles c
+        LEFT JOIN tbl_empresa e ON c.id_empresa = e.id_empresa
+        LEFT JOIN tbl_estados es ON c.estado_consumibles = es.id_estado
+        LEFT JOIN tbl_utilidad u ON c.utilidad_consumibles = u.id_utilidad
+        LEFT JOIN tbl_users us ON c.id_user = us.id_user
+        WHERE 1=1";
+
+if ($filter_empresa) $sql .= " AND e.nombre = '" . $conn->real_escape_string($filter_empresa) . "'";
+if ($filter_estado) $sql .= " AND es.nombre_estado = '" . $conn->real_escape_string($filter_estado) . "'";
+if ($filter_utilidad) $sql .= " AND u.nombre_utilidad = '" . $conn->real_escape_string($filter_utilidad) . "'";
+if ($filter_usuario) $sql .= " AND us.nombre = '" . $conn->real_escape_string($filter_usuario) . "'";
+if ($filter_search) $sql .= " AND c.nombre_consumibles LIKE '%" . $conn->real_escape_string($filter_search) . "%'";
+$sql .= " ORDER BY c.id_consumibles";
+
+$conn->set_charset("utf8mb4");
+$result = $conn->query($sql);
+if (!$result) {
+    die("Error en la consulta: " . $conn->error);
 }
 
 $pdf = new PDF('L');
@@ -44,48 +69,31 @@ $pdf->SetFont('Arial', 'B', 10);
 $pdf->SetFillColor(50, 168, 82);
 $pdf->SetTextColor(255);
 
-// Configurar conexión a MySQL con UTF-8
-$conn->set_charset("utf8mb4");
-
 $widths = [
-    'id' => 15,
-    'nombre' => 50,
-    'cantidad' => 25,
-    'empresa' => 20,
-    'estado' => 20,
-    'utilidad' => 25,
-    'ingreso' => 60,
-    'usuario' => 25
+    'id' => 10, 'nombre' => 50, 'cantidad' => 10, 'empresa' => 25, 
+    'estado' => 20, 'utilidad' => 55, 'ingreso' => 40, 'usuario' => 35
 ];
-
 $tableWidth = array_sum($widths);
 $startX = ($pdf->GetPageWidth() - $tableWidth) / 2;
 
-// Encabezados
 $pdf->SetX($startX);
 $pdf->Cell($widths['id'], 10, 'ID', 1, 0, 'C', true);
 $pdf->Cell($widths['nombre'], 10, utf8_decode('Nombre'), 1, 0, 'C', true);
 $pdf->Cell($widths['cantidad'], 10, utf8_decode('Cant.'), 1, 0, 'C', true);
-$pdf->Cell($widths['empresa'], 10, utf8_decode('Emp.'), 1, 0, 'C', true);
-$pdf->Cell($widths['estado'], 10, utf8_decode('Est.'), 1, 0, 'C', true);
-$pdf->Cell($widths['utilidad'], 10, utf8_decode('Uti.'), 1, 0, 'C', true);
+$pdf->Cell($widths['empresa'], 10, utf8_decode('Empresa'), 1, 0, 'C', true);
+$pdf->Cell($widths['estado'], 10, utf8_decode('Estado'), 1, 0, 'C', true);
+$pdf->Cell($widths['utilidad'], 10, utf8_decode('Utilidad'), 1, 0, 'C', true);
 $pdf->Cell($widths['ingreso'], 10, utf8_decode('Ingreso'), 1, 0, 'C', true);
 $pdf->Cell($widths['usuario'], 10, utf8_decode('Usuario'), 1, 1, 'C', true);
 
 $pdf->SetFont('Arial', '', 10);
 $pdf->SetTextColor(0);
 
-$sql = "SELECT * FROM tbl_consumibles ORDER BY id_consumibles";
-$result = $conn->query($sql);
-
 while ($row = $result->fetch_assoc()) {
     $pdf->SetX($startX);
     
-    // Procesar solo las comillas, dejando intactos otros caracteres
     $nombre = fixQuotes($row['nombre_consumibles']);
-    $nombre = utf8_decode($nombre); // Solo esto para FPDF
-    
-    // Dividir texto en líneas si es necesario
+    $nombre = utf8_decode($nombre);
     $maxWidth = $widths['nombre'] - 2;
     $textHeight = 6;
     $lines = [];
@@ -106,35 +114,28 @@ while ($row = $result->fetch_assoc()) {
     $lineCount = count($lines);
     $cellHeight = max(10, $lineCount * $textHeight);
     
-    // Dibujar celdas
     $pdf->Cell($widths['id'], $cellHeight, $row['id_consumibles'], 1, 0, 'C');
-    
-    // Celda de nombre con texto multilínea
     $x = $pdf->GetX();
     $y = $pdf->GetY();
     $pdf->Cell($widths['nombre'], $cellHeight, '', 1, 0);
-    
-    // Escribir texto línea por línea
     $pdf->SetXY($x, $y);
     foreach ($lines as $line) {
         $pdf->Cell($widths['nombre'], $textHeight, $line, 0, 2, 'C');
     }
     $pdf->SetXY($x + $widths['nombre'], $y);
     
-    // Resto de celdas
     $pdf->Cell($widths['cantidad'], $cellHeight, $row['cantidad_consumibles'], 1, 0, 'C');
-    $pdf->Cell($widths['empresa'], $cellHeight, $row['id_empresa'], 1, 0, 'C');
-    $pdf->Cell($widths['estado'], $cellHeight, $row['estado_consumibles'], 1, 0, 'C');
-    $pdf->Cell($widths['utilidad'], $cellHeight, $row['utilidad_consumibles'], 1, 0, 'C');
+    $pdf->Cell($widths['empresa'], $cellHeight, utf8_decode($row['nombre_empresa']), 1, 0, 'C');
+    $pdf->Cell($widths['estado'], $cellHeight, utf8_decode($row['nombre_estado']), 1, 0, 'C');
+    $pdf->Cell($widths['utilidad'], $cellHeight, utf8_decode($row['nombre_utilidad']), 1, 0, 'C');
     $pdf->Cell($widths['ingreso'], $cellHeight, $row['fecha_ingreso'], 1, 0, 'C');
-    $pdf->Cell($widths['usuario'], $cellHeight, $row['id_user'], 1, 1, 'C');
+    $pdf->Cell($widths['usuario'], $cellHeight, utf8_decode($row['nombre_usuario']), 1, 1, 'C');
     
     if ($lineCount > 1) {
         $pdf->SetY($y + $cellHeight);
     }
 }
 
-// Configuración de salida
 header('Content-Type: application/pdf');
 header('Content-Disposition: attachment; filename="reporte_consumibles.pdf"');
 header('Cache-Control: max-age=0, no-cache, must-revalidate, post-check=0, pre-check=0');

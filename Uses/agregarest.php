@@ -17,8 +17,8 @@ try {
     // Procesar el formulario cuando se envíe
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Validar y sanitizar datos
-        $nombre_estado = isset($_POST['nombre_estado']) ? trim(htmlspecialchars($_POST['nombre_estado'])) : '';
-        $descripcion = isset($_POST['descripcion']) ? trim(htmlspecialchars($_POST['descripcion'])) : '';
+        $nombre_estado = isset($_POST['nombre_estado']) ? trim($_POST['nombre_estado']) : '';
+        $descripcion = isset($_POST['descripcion']) ? trim($_POST['descripcion']) : '';
 
         // Validar campos obligatorios
         if (empty($nombre_estado)) {
@@ -27,6 +27,15 @@ try {
         
         if (empty($descripcion)) {
             throw new Exception("La descripción es requerida");
+        }
+
+        // Validaciones de formato (solo letras, ñ, acentos y espacios)
+        if (!preg_match("/^[a-zA-Z\sñÑáéíóúÁÉÍÓÚ]+$/u", $nombre_estado)) {
+            throw new Exception("El nombre del estado solo puede contener letras (incluyendo ñ y acentos) y espacios");
+        }
+        
+        if (!preg_match("/^[a-zA-Z\sñÑáéíóúÁÉÍÓÚ]+$/u", $descripcion)) {
+            throw new Exception("La descripción solo puede contener letras (incluyendo ñ y acentos) y espacios");
         }
 
         // Preparar consulta SQL
@@ -43,7 +52,7 @@ try {
             $_SESSION['success'] = 'Estado agregado correctamente';
             // Limpiar buffer y redirigir inmediatamente
             ob_end_clean();
-            header("Location: ../pages/Admin/estados.php");
+            header("Location: ../pages/Admin/estados.php?action=added&table=estados");
             exit();
         } else {
             throw new Exception("Error al guardar los datos: " . $stmt->error);
@@ -66,7 +75,7 @@ ob_end_flush();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agregar Datos</title>
+    <title>Agregar Estado</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../assets/CSS/agg.css">
 </head>
@@ -76,7 +85,7 @@ ob_end_flush();
             <div class="flex flex-wrap flex-1 shrink gap-5 items-center self-stretch my-auto basis-0 min-w-[240px] max-md:max-w-full">
                 <div class="flex flex-col self-stretch my-auto min-w-[240px]">
                     <strong>
-                        <div class="text-base text-[var(--verde-oscuro)]">Agregar Datos</div>
+                        <div class="text-base text-[var(--verde-oscuro)]">Agregar Estado</div>
                     </strong>
                     <div class="mt-2 text-sm text-[var(--verde-oscuro)]">
                         Editando tabla: Estados
@@ -86,30 +95,39 @@ ob_end_flush();
         </div>
 
         <?php if (isset($_SESSION['error'])): ?>
-            <div class="mb-10 text-red-500"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></div>
+            <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                <?php echo htmlspecialchars($_SESSION['error']); unset($_SESSION['error']); ?>
+            </div>
         <?php endif; ?>
 
-        <form method="post">
+        <form method="POST">
             <div class="grid grid-cols-1 gap-6 mb-10">
-                <!-- Nombre -->
+                <!-- Nombre del Estado -->
                 <div id="input" class="relative">
                     <input type="text" id="nombre_estado" name="nombre_estado" value="<?= htmlspecialchars($nombre_estado) ?>"
                         class="block w-full text-sm h-[50px] px-4 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-ellipsis overflow-hidden text-nowrap pr-[48px]"
-                        placeholder="Nombre" required />
+                        placeholder="Nombre del Estado"
+                        pattern="[a-zA-Z\sñÑáéíóúÁÉÍÓÚ]+"
+                        title="Solo se permiten letras (incluyendo ñ y acentos) y espacios"
+                        oninput="validarTexto(this)"
+                        required />
                     <label for="nombre_estado"
-                        class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scalechés-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
-                        Nombre
+                        class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
+                        Nombre del Estado
                     </label>
                 </div>
- 
-                <!-- Descripcion -->
+
+                <!-- Descripción -->
                 <div id="input" class="relative">
                     <textarea id="descripcion" name="descripcion"
                         class="block w-full text-sm px-4 py-2 text-slate-900 bg-white rounded-[8px] border border-violet-200 appearance-none focus:border-transparent focus:outline focus:outline-primary focus:ring-0 hover:border-brand-500-secondary peer invalid:border-error-500 invalid:focus:border-error-500 overflow-auto resize-none"
-                        placeholder="Descripción" required
-                        oninput="autoResize(this)"><?= htmlspecialchars($descripcion) ?></textarea>
+                        placeholder="Descripción"
+                        pattern="[a-zA-Z\sñÑáéíóúÁÉÍÓÚ]+"
+                        title="Solo se permiten letras (incluyendo ñ y acentos) y espacios"
+                        oninput="autoResize(this); validarTexto(this)"
+                        required><?php echo htmlspecialchars($descripcion); ?></textarea>
                     <label for="descripcion"
-                        class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white disabled:bg-gray-50-background- px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1">
+                        class="peer-placeholder-shown:-z-10 peer-focus:z-10 absolute text-[14px] leading-[150%] text-primary peer-focus:text-primary peer-invalid:text-error-500 focus:invalid:text-error-500 duration-300 transform -translate-y-[1.2rem] scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-[1.2rem] start-1">
                         Descripción
                     </label>
                 </div>
@@ -121,9 +139,8 @@ ob_end_flush();
                     class="w-fit rounded-lg text-sm px-6 py-3 h-[50px] border border-[var(--verde-oscuro)] bg-[var(--verde-claro)] text-white font-semibold shadow-md hover:bg-green-900 transition-all duration-300">
                     <div class="flex gap-2 items-center">Guardar</div>
                 </button>
-
                 <!-- Botón Cancelar -->
-                <button type="reset"
+                <button type="button"
                     class="w-fit rounded-lg text-sm px-6 py-3 h-[50px] border border-[var(--verde-oscuro)] text-[var(--verde-oscuro)] font-semibold shadow-md hover:bg-red-500 hover:text-white transition-all duration-300"
                     onclick="window.history.back();">
                     <div class="flex gap-2 items-center">Cancelar</div>
@@ -131,33 +148,36 @@ ob_end_flush();
             </div>
         </form>
     </div>
+
     <script>
-    // Función para autoajustar el tamaño del textarea
+    // Función para ajustar la altura del textarea
     function autoResize(textarea) {
         textarea.style.height = 'auto';
-        textarea.style.height = textarea.scrollHeight + 'px';
+        textarea.style.height = Math.max(textarea.scrollHeight, 50) + 'px'; // Altura mínima de 50px
     }
 
-    // Validación para campos de texto (solo letras, números y espacios)
+    // Validación para campos de texto (solo letras con acentos y espacios)
     function validarTexto(input) {
-        input.value = input.value.replace(/[^a-zA-Z0-9\s]/g, '');
+        // Permite letras (incluyendo ñ y acentos) y espacios
+        input.value = input.value.replace(/[^a-zA-Z\sñÑáéíóúÁÉÍÓÚ]/g, '');
     }
 
     // Aplicar validaciones y auto-resize al cargar la página
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
+        // Configuración para nombre_estado
+        const nombreInput = document.getElementById('nombre_estado');
+        nombreInput.addEventListener("input", function() {
+            validarTexto(this);
+        });
+
+        // Configuración para descripción
         const textarea = document.getElementById('descripcion');
-        autoResize(textarea);
-
-        // Validación para nombre_estado
-        document.getElementById('nombre_estado').addEventListener('input', function() {
-            validarTexto(this);
-        });
-
-        // Validación para descripcion
-        document.getElementById('descripcion').addEventListener('input', function() {
-            validarTexto(this);
-            autoResize(this); // Mantener el autoajuste después de la validación
-        });
+        if (textarea) {
+            autoResize(textarea); // Ajuste inicial
+            if (textarea.value) {
+                textarea.dispatchEvent(new Event('input')); // Ajustar label si hay contenido
+            }
+        }
     });
     </script>
 </body>

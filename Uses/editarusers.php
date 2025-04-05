@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bind_param($types, ...$params);
 
     if ($stmt->execute()) {
-        echo "<script>window.location.href='../pages/Admin/users.php';</script>";
+        echo "<script>window.location.href='../pages/Admin/users.php?action=updated&table=users';</script>";
     } else {
         echo "<script>alert('Error al actualizar el usuario');</script>";
         echo $stmt->error;

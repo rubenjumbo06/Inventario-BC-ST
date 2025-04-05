@@ -1,10 +1,12 @@
 <?php
 session_start();
-if (!isset($_SESSION['id_user'])) {
-    header('Location: login.php');
-    exit;
-}
 require_once("../conexion.php");
+
+// Verificar la sesión y permitir solo admin
+if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'admin') {
+    header('Location: ../login.php');
+    exit();
+}
 
 try {
     // Verificar la conexión
@@ -12,33 +14,43 @@ try {
         throw new Exception("Error de conexión: " . $conn->connect_error);
     }
 
-    if (isset($_GET['id_herramientas']) && is_numeric($_GET['id_herramientas'])) {
-        $id_herramientas = intval($_GET['id_herramientas']);
-        $sql = "SELECT * FROM tbl_herramientas WHERE id_herramientas = ?";
-        $stmt = $conn->prepare($sql);
-        if (!$stmt) {
-            throw new Exception("Error en la preparación de la consulta: " . $conn->error);
-        }
-        $stmt->bind_param("i", $id_herramientas);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $herramienta = $result->fetch_assoc();
-
-        if (!$herramienta) {
-            throw new Exception("Herramienta no encontrada.");
-        }
-    } else {
+    // Obtener ID de la herramienta
+    if (!isset($_GET['id_herramientas']) || !is_numeric($_GET['id_herramientas'])) {
         throw new Exception("ID inválido.");
     }
 
+    $id_herramientas = intval($_GET['id_herramientas']);
+    $sql = "SELECT * FROM tbl_herramientas WHERE id_herramientas = ?";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        throw new Exception("Error en la preparación de la consulta: " . $conn->error);
+    }
+    $stmt->bind_param("i", $id_herramientas);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $herramienta = $result->fetch_assoc();
+
+    if (!$herramienta) {
+        throw new Exception("Herramienta no encontrada.");
+    }
+
+    // Procesar el formulario
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Obtener los valores del formulario
-        $nombre_herramientas = $_POST['nombre_herramientas'] ?? null;
-        $cantidad_herramientas = $_POST['cantidad_herramientas'] ?? null;
+        // Obtener y sanitizar los valores del formulario
+        $nombre_herramientas = trim($_POST['nombre_herramientas'] ?? '');
+        $cantidad_herramientas = trim($_POST['cantidad_herramientas'] ?? '');
         $id_empresa = $_POST['id_empresa'] ?? null;
         $estado_herramientas = $_POST['estado_herramientas'] ?? null;
         $utilidad_herramientas = $_POST['utilidad_herramientas'] ?? null;
-        $ubicacion_herramientas = $_POST['ubicacion_herramientas'] ?? null;
+        $ubicacion_herramientas = trim($_POST['ubicacion_herramientas'] ?? '');
+
+        // Validaciones adicionales
+        if (!empty($nombre_herramientas) && !preg_match('/^[A-Za-zÁ-Úá-úñÑ\s]+$/', $nombre_herramientas)) {
+            throw new Exception("El nombre solo puede contener letras y espacios.");
+        }
+        if (!empty($cantidad_herramientas) && (!is_numeric($cantidad_herramientas) || $cantidad_herramientas < 0)) {
+            throw new Exception("La cantidad debe ser un número positivo.");
+        }
 
         // Construir la consulta SQL dinámicamente
         $sql = "UPDATE tbl_herramientas SET ";
@@ -76,6 +88,12 @@ try {
             $types .= "s";
         }
 
+        // Si no hay campos para actualizar
+        if (empty($params)) {
+            header("Location: ../pages/Admin/herramientas.php");
+            exit();
+        }
+
         // Eliminar la última coma y espacio
         $sql = rtrim($sql, ", ");
 
@@ -92,19 +110,16 @@ try {
         $stmt->bind_param($types, ...$params);
 
         if ($stmt->execute()) {
-            if ($_SESSION['role'] == 'admin') {
-                echo "<script>window.location.href='../pages/Admin/herramientas.php';</script>";
-            } else {
-                echo "<script>window.location.href='../pages/Usuario/herramientas.php';</script>";
-            }
+            // Redirigir con parámetros para la notificación
+            header("Location: ../pages/Admin/herramientas.php?action=updated&table=herramientas");
+            exit();
         } else {
             throw new Exception("Error al actualizar la herramienta: " . $stmt->error);
         }
     }
 } catch (Exception $e) {
-    echo "<script>alert('" . addslashes($e->getMessage()) . "');</script>";
+    $mensaje_error = $e->getMessage();
 }
-
 ?>
 
 <!DOCTYPE html>

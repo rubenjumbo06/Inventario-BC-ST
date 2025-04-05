@@ -1,7 +1,7 @@
 <?php
 session_start();
-require_once("../fpdf/fpdf.php"); // Ajusta la ruta si es necesario
-require_once("../conexion.php");  // Ajusta la ruta si es necesario
+require_once("../fpdf/fpdf.php"); 
+require_once("../conexion.php");  
 
 // Obtener los filtros desde el formulario POST
 $filter_estado = isset($_POST['filter_estado']) && !empty($_POST['filter_estado']) ? $_POST['filter_estado'] : null;

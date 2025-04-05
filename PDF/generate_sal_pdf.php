@@ -1,7 +1,59 @@
 <?php
-session_start(); 
-require('../fpdf/fpdf.php');
-require('../conexion.php');
+session_start();
+require_once("../fpdf/fpdf.php");
+require_once("../conexion.php");
+
+// Obtener los filtros desde el formulario POST
+$filter_titulo = isset($_POST['titulo']) && !empty($_POST['titulo']) ? $_POST['titulo'] : null;
+$filter_destino = isset($_POST['destino']) && !empty($_POST['destino']) ? $_POST['destino'] : null;
+$filter_fecha_desde = isset($_POST['fechaDesde']) && !empty($_POST['fechaDesde']) ? $_POST['fechaDesde'] : null;
+$filter_fecha_hasta = isset($_POST['fechaHasta']) && !empty($_POST['fechaHasta']) ? $_POST['fechaHasta'] : null;
+$filter_usuario = isset($_POST['usuario']) && !empty($_POST['usuario']) ? $_POST['usuario'] : null;
+
+// Construir la consulta SQL con filtros dinámicos
+$sql = "SELECT s.id_salidas, s.fecha_creacion, s.items, s.titulo, s.Destino, s.body, u.username 
+        FROM tbl_reg_salidas s
+        LEFT JOIN tbl_users u ON s.id_user = u.id_user
+        WHERE 1=1";
+$params = [];
+$types = "";
+
+if ($filter_titulo) {
+    $sql .= " AND s.titulo LIKE ?";
+    $params[] = "%$filter_titulo%";
+    $types .= "s";
+}
+if ($filter_destino) {
+    $sql .= " AND s.Destino LIKE ?";
+    $params[] = "%$filter_destino%";
+    $types .= "s";
+}
+if ($filter_fecha_desde) {
+    $sql .= " AND s.fecha_creacion >= ?";
+    $params[] = "$filter_fecha_desde 00:00:00";
+    $types .= "s";
+}
+if ($filter_fecha_hasta) {
+    $sql .= " AND s.fecha_creacion <= ?";
+    $params[] = "$filter_fecha_hasta 23:59:59";
+    $types .= "s";
+}
+if ($filter_usuario) {
+    $sql .= " AND u.username = ?";
+    $params[] = $filter_usuario;
+    $types .= "s";
+}
+
+// Preparar y ejecutar la consulta
+$stmt = $conn->prepare($sql);
+if (!$stmt) {
+    die("Error en la preparación de la consulta: " . $conn->error);
+}
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
+$stmt->execute();
+$result = $stmt->get_result();
 
 class PDF extends FPDF {
     function Header() {
@@ -26,34 +78,68 @@ class PDF extends FPDF {
         $this->Cell(20, 10, 'Pagina ' . $this->PageNo(), 0, 0, 'C');
     }
     
-    // Método para formatear la fecha
-    function formatFecha($fechaOriginal) {
-        if (empty($fechaOriginal)) return '';
+    function writeWrappedRow($data, $widths, $startX, $lineHeight = 6) {
+        $this->SetX($startX);
         
-        $fecha = new DateTime($fechaOriginal);
-        return $fecha->format('d/m/Y H:i');
+        $heights = [];
+        foreach ($data as $key => $text) {
+            if (in_array($key, ['titulo', 'destino', 'cuerpo'])) {
+                $wrapped = $this->wrapText(utf8_decode($text), $widths[$key] - 2);
+                $heights[$key] = count($wrapped) * $lineHeight;
+            } else {
+                $heights[$key] = $lineHeight;
+            }
+        }
+        
+        $maxHeight = max(array_values($heights));
+        $maxHeight = max($maxHeight, 10);
+        
+        foreach ($widths as $key => $width) {
+            if (in_array($key, ['titulo', 'destino', 'cuerpo'])) {
+                $x = $this->GetX();
+                $y = $this->GetY();
+                
+                $this->Cell($width, $maxHeight, '', 1, 0);
+                
+                $this->SetXY($x, $y + ($maxHeight - $heights[$key]) / 2);
+                
+                $wrapped = $this->wrapText(utf8_decode($data[$key]), $width - 2);
+                foreach ($wrapped as $line) {
+                    $this->Cell($width, $lineHeight, $line, 0, 2, 'C');
+                }
+                
+                $this->SetXY($x + $width, $y);
+            } else {
+                $x = $this->GetX();
+                $y = $this->GetY();
+                
+                $this->Cell($width, $maxHeight, '', 1, 0);
+                $this->SetXY($x, $y + ($maxHeight - $lineHeight) / 2);
+                $this->Cell($width, $lineHeight, utf8_decode($data[$key]), 0, 0, 'C');
+                $this->SetXY($x + $width, $y);
+            }
+        }
+        $this->Ln();
+        $this->SetY($this->GetY() + $maxHeight - $lineHeight);
     }
     
-    // Método para dibujar texto en múltiples líneas
-    function drawMultiLineText($text, $width, $lineHeight, $maxLines) {
+    function wrapText($text, $maxWidth) {
+        $lines = [];
         $words = explode(' ', $text);
         $currentLine = '';
-        $lines = 0;
         
         foreach ($words as $word) {
             $testLine = $currentLine ? $currentLine.' '.$word : $word;
-            if ($this->GetStringWidth($testLine) < $width - 2) {
+            if ($this->GetStringWidth($testLine) < $maxWidth) {
                 $currentLine = $testLine;
             } else {
-                $this->Cell($width, $lineHeight, $currentLine, 0, 2, 'C');
+                $lines[] = $currentLine;
                 $currentLine = $word;
-                $lines++;
-                if ($lines >= $maxLines) break;
             }
         }
-        if ($currentLine != '' && $lines < $maxLines) {
-            $this->Cell($width, $lineHeight, $currentLine, 0, 2, 'C');
-        }
+        $lines[] = $currentLine;
+        
+        return $lines;
     }
 }
 
@@ -63,21 +149,19 @@ $pdf->SetFont('Arial', 'B', 10);
 $pdf->SetFillColor(50, 168, 82);
 $pdf->SetTextColor(255);
 
-// Configuración exacta de columnas
 $widths = [
     'id' => 10,
-    'fecha' => 30,
-    'items' => 10,
+    'fecha' => 40,
+    'items' => 15,
     'titulo' => 50,
     'destino' => 35,
-    'body' => 85,
+    'cuerpo' => 85,
     'usuario' => 25
 ];
 
 $tableWidth = array_sum($widths);
 $startX = ($pdf->GetPageWidth() - $tableWidth) / 2;
 
-// Encabezado
 $pdf->SetX($startX);
 foreach ($widths as $key => $width) {
     $header = match($key) {
@@ -86,110 +170,33 @@ foreach ($widths as $key => $width) {
         'items' => 'Items',
         'titulo' => 'Titulo',
         'destino' => 'Destino',
-        'body' => 'Descripcion',
+        'cuerpo' => 'Cuerpo',
         'usuario' => 'Usuario'
     };
-    $pdf->Cell($width, 10, $header, 1, 0, 'C', true);
+    $pdf->Cell($width, 8, $header, 1, 0, 'C', true);
 }
 $pdf->Ln();
 
 $pdf->SetFont('Arial', '', 10);
 $pdf->SetTextColor(0);
 
-// Obtener datos
-$sql = "SELECT rs.*, u.nombre as nombre_usuario 
-        FROM tbl_reg_salidas rs
-        LEFT JOIN tbl_users u ON rs.id_user = u.id_user
-        ORDER BY rs.id_salidas";
-$result = $conn->query($sql);
-
 while ($row = $result->fetch_assoc()) {
-    $pdf->SetX($startX);
+    $data = [
+        'id' => $row['id_salidas'],
+        'fecha' => $row['fecha_creacion'],
+        'items' => $row['items'],
+        'titulo' => $row['titulo'],
+        'destino' => $row['Destino'],
+        'cuerpo' => $row['body'],
+        'usuario' => $row['username']
+    ];
     
-    // Preparar el texto para las celdas que pueden ser largas
-    $titulo = utf8_decode($row['titulo']);
-    $destino = utf8_decode($row['Destino']);
-    $body = utf8_decode($row['body']);
-    $usuario = utf8_decode($row['nombre_usuario'] ?? $row['id_user']);
-    $fecha = $pdf->formatFecha($row['fecha_creacion']); // Formatear fecha
-    
-    // Calcular la altura máxima necesaria entre todas las celdas con texto largo
-    $textHeight = 6; // Altura por línea
-    $maxLines = 1;
-    
-    // Función para calcular líneas necesarias
-    $calculateLines = function($text, $maxWidth) use ($pdf) {
-        $lines = [];
-        $words = explode(' ', $text);
-        $currentLine = '';
-        
-        foreach ($words as $word) {
-            $testLine = $currentLine ? $currentLine.' '.$word : $word;
-            if ($pdf->GetStringWidth($testLine) < $maxWidth) {
-                $currentLine = $testLine;
-            } else {
-                $lines[] = $currentLine;
-                $currentLine = $word;
-            }
-        }
-        $lines[] = $currentLine;
-        return count($lines);
-    };
-    
-    // Calcular líneas para cada campo de texto
-    $linesTitulo = $calculateLines($titulo, $widths['titulo'] - 2);
-    $linesDestino = $calculateLines($destino, $widths['destino'] - 2);
-    $linesBody = $calculateLines($body, $widths['body'] - 2);
-    $linesUsuario = $calculateLines($usuario, $widths['usuario'] - 2);
-    
-    $maxLines = max($linesTitulo, $linesDestino, $linesBody, $linesUsuario);
-    $cellHeight = max(10, $maxLines * $textHeight); // Mínimo 10 de altura
-    
-    // Dibujar celdas fijas primero
-    $pdf->Cell($widths['id'], $cellHeight, $row['id_salidas'], 1, 0, 'C');
-    $pdf->Cell($widths['fecha'], $cellHeight, $fecha, 1, 0, 'C'); // Usar fecha formateada
-    $pdf->Cell($widths['items'], $cellHeight, $row['items'], 1, 0, 'C');
-    
-    // Celda de Título (con ajuste de texto)
-    $x = $pdf->GetX();
-    $y = $pdf->GetY();
-    $pdf->Cell($widths['titulo'], $cellHeight, '', 1, 0); // Borde
-    $pdf->SetXY($x, $y);
-    $pdf->drawMultiLineText($titulo, $widths['titulo'], $textHeight, $linesTitulo);
-    $pdf->SetXY($x + $widths['titulo'], $y);
-    
-    // Celda de Destino (con ajuste de texto)
-    $x = $pdf->GetX();
-    $y = $pdf->GetY();
-    $pdf->Cell($widths['destino'], $cellHeight, '', 1, 0); // Borde
-    $pdf->SetXY($x, $y);
-    $pdf->drawMultiLineText($destino, $widths['destino'], $textHeight, $linesDestino);
-    $pdf->SetXY($x + $widths['destino'], $y);
-    
-    // Celda de Body (con ajuste de texto)
-    $x = $pdf->GetX();
-    $y = $pdf->GetY();
-    $pdf->Cell($widths['body'], $cellHeight, '', 1, 0); // Borde
-    $pdf->SetXY($x, $y);
-    $pdf->drawMultiLineText($body, $widths['body'], $textHeight, $linesBody);
-    $pdf->SetXY($x + $widths['body'], $y);
-    
-    // Celda de Usuario (con ajuste de texto)
-    $x = $pdf->GetX();
-    $y = $pdf->GetY();
-    $pdf->Cell($widths['usuario'], $cellHeight, '', 1, 1); // Borde
-    $pdf->SetXY($x, $y);
-    $pdf->drawMultiLineText($usuario, $widths['usuario'], $textHeight, $linesUsuario);
-    
-    // Ajustar posición Y si hubo saltos
-    if ($maxLines > 1) {
-        $pdf->SetY($y + $cellHeight);
-    }
+    $pdf->writeWrappedRow($data, $widths, $startX);
 }
 
 header('Content-Type: application/pdf');
 header('Content-Disposition: attachment; filename="reporte_salidas.pdf"');
 header('Cache-Control: max-age=0');
-$pdf->Output('F', 'php://output');
+$pdf->Output('D', 'reporte_salidas.pdf');
 exit();
 ?>

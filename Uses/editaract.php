@@ -128,11 +128,8 @@ try {
         $stmt->bind_param($types, ...$params);
 
         if ($stmt->execute()) {
-            if ($_SESSION['role'] == 'admin') {
-                echo "<script>window.location.href='../pages/Admin/activos.php';</script>";
-            } else {
-                echo "<script>window.location.href='../pages/Usuario/activos.php';</script>";
-            }
+            header("Location: ../pages/Admin/activos.php?action=updated&table=activos");
+            exit();
         } else {
             throw new Exception("Error al actualizar el activo: " . $stmt->error);
         }

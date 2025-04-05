@@ -12,19 +12,31 @@ $sql = "SELECT a.id_activos, a.nombre_activos, a.cantidad_activos, es.nombre_est
         a.IP, a.MAC, a.SN, a.ubicacion_activos, a.fecha_ingreso 
         FROM tbl_activos a
         LEFT JOIN tbl_empresa e ON a.id_empresa = e.id_empresa
-        LEFT JOIN tbl_estados es ON a.estado_activos = es.id_estado";
+        LEFT JOIN tbl_estados es ON a.estado_activos = es.id_estado
+        WHERE a.id_status = 1";
 $result = $conn->query($sql);
 if (!$result) {
     die("Error en la consulta principal: " . $conn->error);
 }
 
-$estados_sql = "SELECT DISTINCT nombre_estado FROM tbl_estados ORDER BY nombre_estado";
+$estados_sql = "SELECT DISTINCT nombre_estado 
+                FROM tbl_estados es
+                INNER JOIN tbl_activos a ON es.id_estado = a.estado_activos
+                WHERE a.id_status = 1 
+                ORDER BY nombre_estado";
 $estados_result = $conn->query($estados_sql);
 
-$empresas_sql = "SELECT DISTINCT nombre FROM tbl_empresa ORDER BY nombre";
+$empresas_sql = "SELECT DISTINCT nombre 
+                 FROM tbl_empresa e
+                 INNER JOIN tbl_activos a ON e.id_empresa = a.id_empresa
+                 WHERE a.id_status = 1 
+                 ORDER BY nombre";
 $empresas_result = $conn->query($empresas_sql);
 
-$ubicaciones_sql = "SELECT DISTINCT ubicacion_activos FROM tbl_activos ORDER BY ubicacion_activos";
+$ubicaciones_sql = "SELECT DISTINCT ubicacion_activos 
+                    FROM tbl_activos 
+                    WHERE id_status = 1 
+                    ORDER BY ubicacion_activos";
 $ubicaciones_result = $conn->query($ubicaciones_sql);
 ?>
 <!DOCTYPE html>
@@ -62,7 +74,6 @@ $ubicaciones_result = $conn->query($ubicaciones_sql);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             z-index: 1000; 
         }
-    
         #addBtn {
             background-color: rgb(3, 70, 141);
             color: white !important;
@@ -73,9 +84,8 @@ $ubicaciones_result = $conn->query($ubicaciones_sql);
             font-size: 14px;
             transition: background-color 0.3s ease;
         }
-
         #addBtn:hover {
-            background-color:rgb(3, 24, 46);
+            background-color: rgb(3, 24, 46);
         }
         .excelBtn, .pdfBtn {
             color: white !important;
@@ -89,35 +99,28 @@ $ubicaciones_result = $conn->query($ubicaciones_sql);
             display: inline-block;
             text-align: center;
         }
-
         .excelBtn {
             background-color: #28a745;
         }
-
         .excelBtn:hover {
             background-color: #185732;
         }
-
         .pdfBtn {
             background-color: #dc3545;
         }
-
         .pdfBtn:hover {
-            background-color:rgb(167, 35, 31);
+            background-color: rgb(167, 35, 31);
         }
-
         .button-container {
             display: flex;
             justify-content: center;
             gap: 10px;
             margin-top: 20px;
         }
-
         .search-container {
             margin: 20px 0;
             text-align: center;
         }
-
         .search-container input[type="text"] {
             padding: 8px;
             width: 300px;
@@ -125,13 +128,10 @@ $ubicaciones_result = $conn->query($ubicaciones_sql);
             border-radius: 5px;
             font-size: 14px;
         }
-
-        /* Estilos para los filtros personalizados */
         .filter-container {
             position: relative;
             display: inline-block;
         }
-
         .filter-btn {
             background: none;
             border: none;
@@ -140,13 +140,11 @@ $ubicaciones_result = $conn->query($ubicaciones_sql);
             padding: 0 5px;
             vertical-align: middle;
         }
-
         .filter-btn::after {
             content: '▼';
             margin-left: 5px;
             font-size: 10px;
         }
-
         .filter-dropdown {
             display: none;
             position: absolute;
@@ -158,29 +156,94 @@ $ubicaciones_result = $conn->query($ubicaciones_sql);
             max-height: 200px;
             overflow-y: auto;
         }
-
         .filter-dropdown option {
             padding: 8px 12px;
             display: block;
             color: black;
             text-decoration: none;
         }
-
         .filter-dropdown option:hover {
             background-color: #f1f1f1;
         }
-
         .filter-container:hover .filter-dropdown,
         .filter-dropdown.active {
             display: block;
+        }
+        .icon-btn {
+            background: none;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s ease;
+        }
+        .edit-icon-btn {
+            color: rgb(243, 126, 2);
+        }
+        .edit-icon-btn:hover {
+            color: rgb(163, 87, 5);
+            transform: scale(1.1);
+        }
+        .delete-icon-btn {
+            color: #dc3545;
+        }
+        .delete-icon-btn:hover {
+            color: #b02a37;
+            transform: scale(1.1);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .modal-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .confirmBtn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .confirmBtn:hover {
+            background-color: rgb(159, 38, 50);
+        }
+        .cancelBtn {
+            background-color: rgb(30, 172, 59);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .cancelBtn:hover {
+            background-color: rgb(23, 99, 23);
         }
     </style>
 </head>
 <body class="bg-[var(--beige)]">
 <?php include '../header.php'; ?>
 <?php include 'sidebarad.php'; ?>
-
 <div class="main-content">
+<?php include '../../Uses/msg.php'; ?>
     <div class="flex justify-between items-center mt-4 px-4">
         <p class="text-white text-sm sm:text-lg text-shadow">
             <strong>User:</strong> <?php echo htmlspecialchars($_SESSION['username']); ?>
@@ -272,24 +335,58 @@ $ubicaciones_result = $conn->query($ubicaciones_sql);
                 <?php while ($row = $result->fetch_assoc()): ?>
                 <tr>
                     <td><?php echo $row['id_activos']; ?></td>
-                    <td><?php echo $row['nombre_activos']; ?></td>
+                    <td><?php echo htmlspecialchars($row['nombre_activos']); ?></td>
                     <td><?php echo $row['cantidad_activos']; ?></td>
-                    <td><?php echo $row['estado']; ?></td>
-                    <td><?php echo $row['nombre_empresa']; ?></td>
-                    <td><?php echo $row['IP']; ?></td>
-                    <td><?php echo $row['MAC']; ?></td>
-                    <td><?php echo $row['SN']; ?></td>
-                    <td><?php echo $row['ubicacion_activos']; ?></td>
+                    <td><?php echo htmlspecialchars($row['estado']); ?></td>
+                    <td><?php echo htmlspecialchars($row['nombre_empresa']); ?></td>
+                    <td><?php echo htmlspecialchars($row['IP']); ?></td>
+                    <td><?php echo htmlspecialchars($row['MAC']); ?></td>
+                    <td><?php echo htmlspecialchars($row['SN']); ?></td>
+                    <td><?php echo htmlspecialchars($row['ubicacion_activos']); ?></td>
                     <td><?php echo $row['fecha_ingreso']; ?></td>
                     <td>
                         <a href="../../Uses/editaract.php?id_activos=<?php echo $row['id_activos']; ?>">
-                            <button class="editBtn">Editar</button>
+                            <button class="edit-icon-btn icon-btn" title="Editar">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+                                </svg>
+                            </button>
                         </a>
+                        <button class="delete-icon-btn icon-btn deleteBtn" 
+                                data-id="<?php echo $row['id_activos']; ?>" 
+                                data-nombre="<?php echo htmlspecialchars($row['nombre_activos']); ?>" 
+                                data-cantidad="<?php echo $row['cantidad_activos']; ?>" 
+                                data-estado="<?php echo htmlspecialchars($row['estado']); ?>" 
+                                data-empresa="<?php echo htmlspecialchars($row['nombre_empresa']); ?>" 
+                                data-ip="<?php echo htmlspecialchars($row['IP']); ?>" 
+                                data-mac="<?php echo htmlspecialchars($row['MAC']); ?>" 
+                                data-sn="<?php echo htmlspecialchars($row['SN']); ?>" 
+                                data-ubicacion="<?php echo htmlspecialchars($row['ubicacion_activos']); ?>" 
+                                data-fecha="<?php echo $row['fecha_ingreso']; ?>"
+                                title="Eliminar">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M5.5 5.5A.5.5 0 0 1 6 5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1-.5-.5z"/>
+                                <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1z"/>
+                            </svg>
+                        </button>
                     </td>
                 </tr>
                 <?php endwhile; ?>
             </tbody>
         </table>      
+
+        <!-- Modal de confirmación -->
+        <div id="deleteModal" class="modal">
+            <div class="modal-content">
+                <h2>Confirmar Eliminación</h2>
+                <p>¿Estás seguro de que deseas eliminar este activo?</p>
+                <div id="modalData"></div>
+                <div class="modal-buttons">
+                    <button id="confirmDelete" class="confirmBtn">Confirmar</button>
+                    <button id="cancelDelete" class="cancelBtn">Cancelar</button>
+                </div>
+            </div>
+        </div>
     </main>
 </div>
 
@@ -347,7 +444,6 @@ $ubicaciones_result = $conn->query($ubicaciones_sql);
                 }
             }
 
-            // Actualizar los campos ocultos de ambos formularios
             document.getElementById('filter_estado').value = filters.estado;
             document.getElementById('filter_empresa').value = filters.empresa;
             document.getElementById('filter_ubicacion').value = filters.ubicacion;
@@ -387,6 +483,99 @@ $ubicaciones_result = $conn->query($ubicaciones_sql);
                 });
             }
         });
+
+        // Funcionalidad del modal de eliminación
+        const modal = document.getElementById('deleteModal');
+        const modalData = document.getElementById('modalData');
+        const confirmDelete = document.getElementById('confirmDelete');
+        const cancelDelete = document.getElementById('cancelDelete');
+        const notification = document.getElementById('notification');
+        let currentId = null;
+
+        document.querySelectorAll('.deleteBtn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                currentId = this.dataset.id;
+                const nombre = this.dataset.nombre;
+                const cantidad = this.dataset.cantidad;
+                const estado = this.dataset.estado;
+                const empresa = this.dataset.empresa;
+                const ip = this.dataset.ip;
+                const mac = this.dataset.mac;
+                const sn = this.dataset.sn;
+                const ubicacion = this.dataset.ubicacion;
+                const fecha = this.dataset.fecha;
+
+                modalData.innerHTML = `
+                    <p><strong>ID:</strong> ${currentId}</p>
+                    <p><strong>Nombre:</strong> ${nombre}</p>
+                    <p><strong>Cantidad:</strong> ${cantidad}</p>
+                    <p><strong>Estado:</strong> ${estado}</p>
+                    <p><strong>Empresa:</strong> ${empresa}</p>
+                    <p><strong>IP:</strong> ${ip}</p>
+                    <p><strong>MAC:</strong> ${mac}</p>
+                    <p><strong>Serie:</strong> ${sn}</p>
+                    <p><strong>Ubicación:</strong> ${ubicacion}</p>
+                    <p><strong>Fecha Ingreso:</strong> ${fecha}</p>
+                `;
+                modal.style.display = 'block';
+            });
+        });
+
+        cancelDelete.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+
+        confirmDelete.addEventListener('click', function() {
+            fetch('../../Uses/eliminaract.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `id_activos=${encodeURIComponent(currentId)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const rows = document.querySelectorAll('tbody tr');
+                    rows.forEach(row => {
+                        const idCell = row.querySelector('td:first-child');
+                        if (idCell && idCell.textContent === currentId) {
+                            row.remove();
+                        }
+                    });
+                    modal.style.display = 'none';
+                    showNotification('El activo ha sido eliminado correctamente');
+                } else {
+                    showNotification('Error al ocultar el activo: ' + (data.message || 'Error desconocido'), true);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Ocurrió un error al intentar ocultar el activo.', true);
+            });
+        });
+
+        window.addEventListener('click', function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Función para mostrar notificaciones dinámicas
+        function showNotification(message, isError = false) {
+            const notification = document.getElementById('notification');
+            const notificationText = notification.querySelector('span:first-child');
+            notificationText.textContent = message;
+            notification.classList.remove('hidden');
+            if (isError) {
+                notification.classList.add('error');
+            } else {
+                notification.classList.remove('error');
+            }
+            setTimeout(() => {
+                notification.classList.add('hidden');
+            }, 5000);
+        }
     });
 </script>
 </body>

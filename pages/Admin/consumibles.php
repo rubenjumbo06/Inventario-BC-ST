@@ -1,5 +1,4 @@
 <?php
-// Configuración segura de sesión
 session_start([
     'cookie_lifetime' => 86400,
     'cookie_secure'   => isset($_SERVER['HTTPS']),
@@ -16,11 +15,23 @@ $role = $_SESSION['role'];
 
 require_once("../../conexion.php");
 
-// Primero guardamos los resultados de las consultas de filtro en arrays
+// Consulta principal con JOINs correctos y filtro de id_status = 1
+$sql = "SELECT c.id_consumibles, c.nombre_consumibles, c.cantidad_consumibles, 
+        e.nombre AS nombre_empresa, es.nombre_estado, u.nombre_utilidad, c.fecha_ingreso, us.nombre AS nombre_usuario
+        FROM tbl_consumibles c
+        LEFT JOIN tbl_empresa e ON c.id_empresa = e.id_empresa
+        LEFT JOIN tbl_estados es ON c.estado_consumibles = es.id_estado
+        LEFT JOIN tbl_utilidad u ON c.utilidad_consumibles = u.id_utilidad
+        LEFT JOIN tbl_users us ON c.id_user = us.id_user
+        WHERE c.id_status = 1";
+$result = $conn->query($sql);
+
+// Consultas para filtros desplegables con id_status = 1
 $empresas = [];
 $empresas_sql = "SELECT DISTINCT e.id_empresa, e.nombre 
                  FROM tbl_empresa e 
                  INNER JOIN tbl_consumibles c ON e.id_empresa = c.id_empresa 
+                 WHERE c.id_status = 1 
                  ORDER BY e.nombre";
 $empresas_result = $conn->query($empresas_sql);
 while ($empresa = $empresas_result->fetch_assoc()) {
@@ -31,6 +42,7 @@ $estados = [];
 $estados_sql = "SELECT DISTINCT es.id_estado, es.nombre_estado 
                 FROM tbl_estados es 
                 INNER JOIN tbl_consumibles c ON es.id_estado = c.estado_consumibles 
+                WHERE c.id_status = 1 
                 ORDER BY es.nombre_estado";
 $estados_result = $conn->query($estados_sql);
 while ($estado = $estados_result->fetch_assoc()) {
@@ -41,6 +53,7 @@ $utilidades = [];
 $utilidades_sql = "SELECT DISTINCT u.id_utilidad, u.nombre_utilidad 
                    FROM tbl_utilidad u 
                    INNER JOIN tbl_consumibles c ON u.id_utilidad = c.utilidad_consumibles 
+                   WHERE c.id_status = 1 
                    ORDER BY u.nombre_utilidad";
 $utilidades_result = $conn->query($utilidades_sql);
 while ($utilidad = $utilidades_result->fetch_assoc()) {
@@ -51,21 +64,12 @@ $usuarios = [];
 $usuarios_sql = "SELECT DISTINCT us.id_user, us.nombre 
                  FROM tbl_users us 
                  INNER JOIN tbl_consumibles c ON us.id_user = c.id_user 
+                 WHERE c.id_status = 1 
                  ORDER BY us.nombre";
 $usuarios_result = $conn->query($usuarios_sql);
 while ($usuario = $usuarios_result->fetch_assoc()) {
     $usuarios[] = $usuario;
 }
-
-// Consulta principal con JOINs correctos
-$sql = "SELECT c.id_consumibles, c.nombre_consumibles, c.cantidad_consumibles, 
-        e.nombre AS nombre_empresa, es.nombre_estado, u.nombre_utilidad, c.fecha_ingreso, us.nombre AS nombre_usuario
-        FROM tbl_consumibles c
-        LEFT JOIN tbl_empresa e ON c.id_empresa = e.id_empresa
-        LEFT JOIN tbl_estados es ON c.estado_consumibles = es.id_estado
-        LEFT JOIN tbl_utilidad u ON c.utilidad_consumibles = u.id_utilidad
-        LEFT JOIN tbl_users us ON c.id_user = us.id_user";
-$result = $conn->query($sql);
 ?>
 
 <!DOCTYPE html>
@@ -212,10 +216,10 @@ $result = $conn->query($sql);
             transition: transform 0.2s ease;
         }
         .edit-icon-btn {
-            color:rgb(243, 126, 2);
+            color: rgb(243, 126, 2);
         }
         .edit-icon-btn:hover {
-            color:rgb(163, 87, 5);
+            color: rgb(163, 87, 5);
             transform: scale(1.1);
         }
         .delete-icon-btn {
@@ -258,10 +262,10 @@ $result = $conn->query($sql);
             cursor: pointer;
         }
         .confirmBtn:hover {
-            background-color:rgb(159, 38, 50);
+            background-color: rgb(159, 38, 50);
         }
         .cancelBtn {
-            background-color:rgb(30, 172, 59);
+            background-color: rgb(30, 172, 59);
             color: white;
             border: none;
             padding: 10px 20px;
@@ -269,7 +273,7 @@ $result = $conn->query($sql);
             cursor: pointer;
         }
         .cancelBtn:hover {
-            background-color:rgb(23, 99, 23);
+            background-color: rgb(23, 99, 23);
         }
     </style>
 </head>
@@ -277,6 +281,7 @@ $result = $conn->query($sql);
 <?php include '../header.php'; ?>
 <?php include 'sidebarad.php'; ?>
 <div class="main-content">
+<?php include '../../Uses/msg.php'; ?>
     <div class="flex justify-between items-center mt-4 px-4">
         <p class="text-white text-sm sm:text-lg text-shadow">
             <strong>User:</strong> <?php echo htmlspecialchars($_SESSION['nombre'] ?? 'Usuario'); ?> 
@@ -294,10 +299,20 @@ $result = $conn->query($sql);
             <a href="../../Uses/agregarcon.php">
                 <button id="addBtn">Agregar Nuevo</button>
             </a>
-            <a href="../../EXCEL/generate_con_xls.php">
-                <button class="excelBtn">Descargar Excel</button>
-            </a>
-            <form action="../../PDF/generate_con_pdf.php" method="post">
+            <form id="excelForm" action="../../EXCEL/generate_con_xls.php" method="post">
+                <input type="hidden" name="empresa" id="excelEmpresaFilter" value="">
+                <input type="hidden" name="estado" id="excelEstadoFilter" value="">
+                <input type="hidden" name="utilidad" id="excelUtilidadFilter" value="">
+                <input type="hidden" name="usuario" id="excelUsuarioFilter" value="">
+                <input type="hidden" name="nombre_search" id="excelNombreSearchFilter" value="">
+                <button type="submit" class="excelBtn">Descargar Excel</button>
+            </form>
+            <form id="pdfForm" action="../../PDF/generate_con_pdf.php" method="post">
+                <input type="hidden" name="empresa" id="empresaFilter" value="">
+                <input type="hidden" name="estado" id="estadoFilter" value="">
+                <input type="hidden" name="utilidad" id="utilidadFilter" value="">
+                <input type="hidden" name="usuario" id="usuarioFilter" value="">
+                <input type="hidden" name="nombre_search" id="nombreSearchFilter" value="">
                 <button type="submit" class="pdfBtn">Descargar PDF</button>
             </form>
         </div>   
@@ -446,16 +461,32 @@ $result = $conn->query($sql);
         const searchNombre = document.getElementById('searchNombre');
         const table = document.querySelector('table');
         const rows = table.getElementsByTagName('tr');
+        const pdfForm = document.getElementById('pdfForm');
+        const excelForm = document.getElementById('excelForm');
 
         let filters = {
             empresa: '',
             estado: '',
             utilidad: '',
-            usuario: ''
+            usuario: '',
+            nombre_search: ''
         };
 
         function applyFilters() {
             const nombreTerm = searchNombre.value.toLowerCase();
+            filters.nombre_search = nombreTerm;
+
+            // Actualizar los campos ocultos para ambos formularios
+            document.getElementById('nombreSearchFilter').value = nombreTerm;
+            document.getElementById('excelNombreSearchFilter').value = nombreTerm;
+            document.getElementById('empresaFilter').value = filters.empresa;
+            document.getElementById('excelEmpresaFilter').value = filters.empresa;
+            document.getElementById('estadoFilter').value = filters.estado;
+            document.getElementById('excelEstadoFilter').value = filters.estado;
+            document.getElementById('utilidadFilter').value = filters.utilidad;
+            document.getElementById('excelUtilidadFilter').value = filters.utilidad;
+            document.getElementById('usuarioFilter').value = filters.usuario;
+            document.getElementById('excelUsuarioFilter').value = filters.usuario;
 
             for (let i = 1; i < rows.length; i++) {
                 const nombre = rows[i].getElementsByTagName('td')[1].textContent.toLowerCase();
@@ -489,20 +520,18 @@ $result = $conn->query($sql);
             });
         });
 
-        document.querySelectorAll('.filter-dropdown').forEach(dropdown => {
-            dropdown.addEventListener('click', function(e) {
-                e.stopPropagation();
-                if (e.target.tagName === 'OPTION') {
-                    const filterType = this.dataset.filter;
-                    const value = e.target.dataset.value;
-                    filters[filterType] = value === '' ? '' : value;
-                    applyFilters();
-                    const btn = this.previousElementSibling;
-                    btn.textContent = value === '' ? 'Filtrar' : e.target.textContent;
-                }
+        document.querySelectorAll('.filter-dropdown option').forEach(option => {
+            option.addEventListener('click', function() {
+                const filterType = this.parentElement.dataset.filter;
+                const value = this.dataset.value;
+                filters[filterType] = value === '' ? '' : value;
+                applyFilters();
+                this.parentElement.classList.remove('active');
+                const btn = this.parentElement.previousElementSibling;
+                btn.textContent = value === '' ? 'Filtrar' : value;
             });
         });
-        
+
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.filter-container')) {
                 document.querySelectorAll('.filter-dropdown').forEach(dropdown => {
@@ -516,11 +545,11 @@ $result = $conn->query($sql);
         const modalData = document.getElementById('modalData');
         const confirmDelete = document.getElementById('confirmDelete');
         const cancelDelete = document.getElementById('cancelDelete');
+        const notification = document.getElementById('notification');
         let currentId = null;
 
         document.querySelectorAll('.deleteBtn').forEach(btn => {
             btn.addEventListener('click', function() {
-                console.log('Botón Eliminar clicado, ID:', this.dataset.id);
                 currentId = this.dataset.id;
                 const nombre = this.dataset.nombre;
                 const cantidad = this.dataset.cantidad;
@@ -549,7 +578,6 @@ $result = $conn->query($sql);
         });
 
         confirmDelete.addEventListener('click', function() {
-            console.log('Confirmando eliminación, ID:', currentId);
             fetch('../../Uses/eliminarcon.php', {
                 method: 'POST',
                 headers: {
@@ -557,12 +585,8 @@ $result = $conn->query($sql);
                 },
                 body: `id_consumibles=${encodeURIComponent(currentId)}`
             })
-            .then(response => {
-                console.log('Estado de la respuesta:', response.status, response.statusText);
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log('Datos parseados:', data);
                 if (data.success) {
                     const rows = document.querySelectorAll('tbody tr');
                     rows.forEach(row => {
@@ -572,13 +596,14 @@ $result = $conn->query($sql);
                         }
                     });
                     modal.style.display = 'none';
+                    showNotification('El consumible ha sido eliminado correctamente');
                 } else {
-                    alert('Error al eliminar el consumible: ' + (data.message || 'Unknown error'));
+                    showNotification('Error al ocultar el consumible: ' + (data.message || 'Error desconocido'), true);
                 }
             })
             .catch(error => {
-                console.error('Error en la solicitud:', error);
-                alert('Ocurrió un error al intentar eliminar el consumible: ' + error.message);
+                console.error('Error:', error);
+                showNotification('Ocurrió un error al intentar ocultar el consumible.', true);
             });
         });
 
@@ -587,6 +612,31 @@ $result = $conn->query($sql);
                 modal.style.display = 'none';
             }
         });
+
+        // Actualizar los filtros al enviar los formularios
+        pdfForm.addEventListener('submit', function(e) {
+            applyFilters();
+        });
+
+        excelForm.addEventListener('submit', function(e) {
+            applyFilters();
+        });
+
+        // Función para mostrar notificaciones dinámicas
+        function showNotification(message, isError = false) {
+            const notification = document.getElementById('notification');
+            const notificationText = notification.querySelector('span:first-child');
+            notificationText.textContent = message;
+            notification.classList.remove('hidden');
+            if (isError) {
+                notification.classList.add('error');
+            } else {
+                notification.classList.remove('error');
+            }
+            setTimeout(() => {
+                notification.classList.add('hidden');
+            }, 5000);
+        }
     });
 </script>
 </body>

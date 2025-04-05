@@ -2,10 +2,14 @@
 require_once("../conexion.php");
 session_start();
 
-// Desactivar cualquier salida automática
 ob_start();
 
 try {
+    // Verificar la sesión del administrador
+    if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'admin') {
+        throw new Exception("Acceso denegado: solo los administradores pueden editar consumibles.");
+    }
+
     // Verificar la conexión a la base de datos
     if ($conn->connect_error) {
         throw new Exception("Error de conexión a la base de datos");
@@ -64,7 +68,7 @@ try {
             if (!preg_match("/^[a-zA-Z0-9\s]+$/", $nombre_consumibles)) {
                 throw new Exception("El nombre solo puede contener letras, números y espacios");
             }
-            if (strlen($nombre_consumibles) > 255) { // Límite de longitud (ajusta según tu base de datos)
+            if (strlen($nombre_consumibles) > 255) {
                 throw new Exception("El nombre no puede exceder los 255 caracteres");
             }
     
@@ -117,7 +121,8 @@ try {
             if (empty($updates)) {
                 $_SESSION['message'] = 'No se realizaron cambios';
                 ob_end_clean();
-                redirectBasedOnRole();
+                header("Location: ../pages/Admin/consumibles.php");
+                exit();
             }
 
             $sql .= implode(", ", $updates) . " WHERE id_consumibles = ?";
@@ -132,9 +137,10 @@ try {
             $stmt->bind_param($types, ...$params);
             
             if ($stmt->execute()) {
-                $_SESSION['success'] = 'Consumible actualizado correctamente';
                 ob_end_clean();
-                redirectBasedOnRole();
+                // Redirigir con parámetros para la notificación
+                header("Location: ../pages/Admin/consumibles.php?action=updated&table=consumibles");
+                exit();
             } else {
                 throw new Exception("Error al actualizar el consumible: " . $stmt->error);
             }
@@ -152,20 +158,6 @@ try {
     header("Location: ../pages/error.php");
     exit();
 }
-
-function redirectBasedOnRole() {
-    if (isset($_SESSION['role'])) {
-        $role = $_SESSION['role'];
-        $page = ($role == 'admin') ? '../pages/Admin/consumibles.php' : 
-                (($role == 'user') ? '../pages/Usuario/consumibles.php' : 
-                '../pages/Tecnico/consumibles.php');
-        header("Location: " . $page);
-        exit();
-    }
-    header("Location: ../pages/consumibles.php");
-    exit();
-}
-
 ob_end_flush();
 ?>
 

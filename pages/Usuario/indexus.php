@@ -1,7 +1,10 @@
 <?php
 session_start();
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Cache-Control: post-check=0, pre-check=0', false);
+header('Pragma: no-cache');
 if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'user') {
-    header('Location: login.php');
+    header('Location: /Inventario/login.php');
     exit;
 }
 
@@ -15,100 +18,104 @@ $role = $_SESSION['role'] ?? '';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Control - Usuario</title>
     <style>
-        /* Estilos para el modal */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 100;
-            left: 0;
+        .card {
+            position: relative;
+            width: 420px;
+            aspect-ratio: 16/9;
+            background-color: rgb(255, 255, 255);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            perspective: 1000px;
+            box-shadow: 0 0 0 5px #ffffff80;
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+        }
+
+        .card img {
+            width: 64px;
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 16px rgba(255, 255, 255, 0.9);
+        }
+
+        .card__content {
+            position: absolute;
             top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.5);
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: #f2f2f2;
+            transform: rotateX(-90deg);
+            transform-origin: bottom;
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        .modal-content {
-            background-color: white;
-            color: black;
-            margin: 15% auto;
-            padding: 30px;
-            border: 3px solid black;
-            width: 80%;
-            max-width: 500px;
-            text-align: center;
-            border-radius: 10px;
-            position: relative;
+        .card:hover .card__content {
+            transform: rotateX(0deg);
         }
 
-        .modal-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 20px;
+        .card__title {
+            margin: 0;
+            font-size: 20px;
+            color: #333;
+            font-weight: 700;
         }
 
-        .modal-button {
-            padding: 10px 20px;
+        .card:hover img {
+            scale: 0;
+        }
+
+        .card__description {
+            margin: 10px 0 10px;
+            font-size: 15px;
+            color: #777;
+            line-height: 1.4;
+        }
+
+        .card__button {
+            padding: 10px 15px;
+            border-radius: 8px;
+            background: rgb(67, 198, 24);
             border: none;
-            border-radius: 5px;
+            color: white;
             cursor: pointer;
-            font-weight: bold;
+            margin: 5px;
             transition: background-color 0.3s;
         }
 
-        .modal-button.ingresar {
-            background-color: rgba(58, 165, 37, 0.77);
-            color: white;
+        .card__button:hover {
+            background: rgb(41, 125, 14);
         }
 
-        .modal-button.ingresar:hover {
-            background-color: rgba(26, 67, 18, 0.77);
-        }
-
-        .modal-button.cancelar {
-            background-color:rgb(202, 45, 34);
-            color: white;
-        }
-
-        .modal-button.cancelar:hover {
-            background-color: rgb(81, 18, 18);
-        }
-
-        /* Estilos para los botones del panel */
-        .panel-button {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
-            cursor: pointer;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+            gap: 10px;
             justify-content: center;
+            max-width: 1000px;
+            margin: 0 auto;
         }
 
-        .panel-button:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        @media (min-width: 640px) {
+            .grid-container {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
         }
 
-        .panel-button img {
-            width: 64px;
-            height: 64px;
-            object-fit: contain;
-            margin-bottom: 12px;
-        }
-
-        .panel-button span {
-            color: var(--verde-claro);
-            font-weight: 600;
-            transition: color 0.2s;
-        }
-
-        .panel-button:hover span {
-            color: var(--verde-oscuro);
+        @media (min-width: 1024px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 500px);
+                gap: 30px;
+                justify-content: space-between;
+            }
         }
     </style>
 </head>
@@ -126,80 +133,53 @@ $role = $_SESSION['role'] ?? '';
         </p>
     </div>
 
-    <div class="px-4 sm:px-10 md:px-20 lg:px-60">
-        <div class="mt-20 lg:mt-24">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
-                <!-- Botón Herramientas -->
-                <div class="panel-button" onclick="openModal('Herramientas', 'Información de las Herramientas existentes en almacén.', 'herramientas.php')">
+    <div class="px-4 sm:px-10 md:px-20 lg:px-20">
+        <div class="mt-10">
+            <div class="grid-container">
+                <!-- Card Herramientas -->
+                <div class="card">
                     <img src="../../assets/img/herramientas.png" alt="Herramientas">
-                    <span>Herramientas</span>
+                    <div class="card__content">
+                        <p class="card__title">Herramientas</p>
+                        <p class="card__description">Información de las Herramientas existentes en almacén.</p>
+                        <button class="card__button" onclick="window.location.href='herramientas.php'">Ingresar</button>
+                    </div>
                 </div>
 
-                <!-- Botón Activos -->
-                <div class="panel-button" onclick="openModal('Activos', 'Información de los Activos existentes en almacén.', 'activos.php')">
+                <!-- Card Activos -->
+                <div class="card">
                     <img src="../../assets/img/activos.png" alt="Activos">
-                    <span>Activos</span>
+                    <div class="card__content">
+                        <p class="card__title">Activos</p>
+                        <p class="card__description">Información de los Activos existentes en almacén.</p>
+                        <button class="card__button" onclick="window.location.href='activos.php'">Ingresar</button>
+                    </div>
                 </div>
 
-                <!-- Botón Consumibles -->
-                <div class="panel-button" onclick="openModal('Consumibles', 'Información de los Consumibles existentes en almacén.', 'consumibles.php')">
+                <!-- Card Consumibles -->
+                <div class="card">
                     <img src="../../assets/img/consumibles.png" alt="Consumibles">
-                    <span>Consumibles</span>
+                    <div class="card__content">
+                        <p class="card__title">Consumibles</p>
+                        <p class="card__description">Información de los Consumibles existentes en almacén.</p>
+                        <button class="card__button" onclick="window.location.href='consumibles.php'">Ingresar</button>
+                    </div>
                 </div>
 
-                <!-- Botón Perfil -->
-                <div class="panel-button" onclick="openModal('Perfil de Usuario', 'Información Personal del Usuario.', 'perfilus.php')">
-                    <img src="../../assets/img/perfil.png" alt="Perfil">
-                    <span>Perfil de Usuario</span>
+                <!-- Card Perfil -->
+                <div class="card">
+                    <img src="../../assets/img/perfil.png" alt="Perfil de Usuario">
+                    <div class="card__content">
+                        <p class="card__title">Perfil de Usuario</p>
+                        <p class="card__description">Información Personal del Usuario.</p>
+                        <button class="card__button" onclick="window.location.href='perfilus.php'">Ingresar</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-   <!-- Modal -->
-   <div id="infoModal" class="modal">
-        <div class="modal-content">
-            <h2 id="modalTitle" class="text-2xl font-bold mb-4"></h2>
-            <p id="modalDescription" class="mb-6"></p>
-            <div class="modal-buttons">
-                <button id="modalIngresarBtn" class="modal-button ingresar">Ingresar</button>
-                <button onclick="closeModal()" class="modal-button cancelar">Cancelar</button>
-            </div>
-        </div>
-    </div>
-    
+
     <script>
-        // Variables para el modal
-        let currentRedirectUrl = '';
-        
-        // Función para abrir el modal
-        function openModal(title, description, redirectUrl) {
-            document.getElementById('modalTitle').textContent = title;
-            document.getElementById('modalDescription').textContent = description;
-            currentRedirectUrl = redirectUrl;
-            document.getElementById('infoModal').style.display = 'block';
-        }
-        
-        // Función para cerrar el modal
-        function closeModal() {
-            document.getElementById('infoModal').style.display = 'none';
-            currentRedirectUrl = '';
-        }
-        
-        // Configurar el botón de ingresar
-        document.getElementById('modalIngresarBtn').addEventListener('click', function() {
-            if (currentRedirectUrl) {
-                window.location.href = currentRedirectUrl;
-            }
-        });
-        
-        // Cerrar modal al hacer clic fuera del contenido
-        window.addEventListener('click', function(event) {
-            const modal = document.getElementById('infoModal');
-            if (event.target === modal) {
-                closeModal();
-            }
-        });
-
         // Función para actualizar fecha y hora
         function actualizarFechaHora() {
             const ahora = new Date();

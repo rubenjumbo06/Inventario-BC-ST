@@ -1,5 +1,6 @@
 <?php
 session_start();
+date_default_timezone_set('America/Lima');
 if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'tecnico') {
     header('Location: login.php');
     exit;
@@ -8,31 +9,37 @@ $usuario = isset($_SESSION['nombre']) ? $_SESSION['nombre'] : 'Usuario no defini
 $role = $_SESSION['role'];
 
 include '../../conexion.php';
-$conexion = $conn;
+$conn = $conn;
 
 if (!$conn) {
     die("Error de conexión: " . mysqli_connect_error());
 }
 
 // Consultar herramientas en almacén
-$sql_h = "SELECT id_herramientas, nombre_herramientas, ubicacion_herramientas FROM tbl_herramientas WHERE ubicacion_herramientas = 'En almacen'";
-$resultado_h = $conexion->query($sql_h);
+$sql_h = "SELECT id_herramientas, nombre_herramientas 
+          FROM tbl_herramientas 
+          WHERE ubicacion_herramientas = 'En almacen'";
+$resultado_h = $conn->query($sql_h);
 if (!$resultado_h) {
-    die("Error en consulta de herramientas: " . $conexion->error);
+    die("Error en consulta de herramientas: " . $conn->error);
 }
 
 // Consultar activos en almacén
-$sql_act = "SELECT id_activos, nombre_activos, ubicacion_activos FROM tbl_activos WHERE ubicacion_activos = 'En almacen'";
-$resultado_act = $conexion->query($sql_act);
+$sql_act = "SELECT id_activos, nombre_activos 
+            FROM tbl_activos 
+            WHERE ubicacion_activos = 'En almacen'";
+$resultado_act = $conn->query($sql_act);
 if (!$resultado_act) {
-    die("Error en consulta de activos: " . $conexion->error);
+    die("Error en consulta de activos: " . $conn->error);
 }
 
 // Consultar consumibles en almacén
-$sql_con = "SELECT id_consumibles, nombre_consumibles, cantidad_consumibles, id_empresa, estado_consumibles, utilidad_consumibles, id_user FROM tbl_consumibles WHERE ubicacion_consumibles = 'En almacen'";
-$resultado_con = $conexion->query($sql_con);
+$sql_con = "SELECT id_consumibles, nombre_consumibles, cantidad_consumibles 
+            FROM tbl_consumibles 
+            WHERE ubicacion_consumibles = 'En almacen' AND cantidad_consumibles > 0";
+$resultado_con = $conn->query($sql_con);
 if (!$resultado_con) {
-    die("Error en consulta de consumibles: " . $conexion->error);
+    die("Error en consulta de consumibles: " . $conn->error);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -42,139 +49,156 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $selectedItems = json_decode($_POST['body'], true);
     $totalItems = 0;
     $body = "";
+    $fecha = date('Y-m-d H:i:s');
 
     $regex = '/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]+$/'; 
     
-    if (!preg_match($regex, $titulo)) {
-        echo "<script>alert('El título solo puede contener letras, números y espacios'); window.location='reg_salidas.php';</script>";
-        exit;
-    }
-    if (!preg_match($regex, $destino)) {
-        echo "<script>alert('El destino solo puede contener letras, números y espacios'); window.location='reg_salidas.php';</script>";
+    if (!preg_match($regex, $titulo) || !preg_match($regex, $destino)) {
+        echo "<script>alert('El título y destino solo pueden contener letras, números y espacios'); window.location='reg_salidas.php';</script>";
         exit;
     }
 
-    // Procesar herramientas
-    if (!empty($selectedItems['herramientas'])) {
-        $herramientas = array_values($selectedItems['herramientas']);
-        $body .= "Herramientas: (" . implode(", ", $herramientas) . "), ";
-        $totalItems += count($herramientas);
-
-        foreach ($selectedItems['herramientas'] as $id => $nombre) {
-            $stmt = $conn->prepare("UPDATE tbl_herramientas SET ubicacion_herramientas = 'En campo' WHERE id_herramientas = ? AND ubicacion_herramientas = 'En almacen'");
-            $stmt->bind_param("i", $id);
-            if (!$stmt->execute()) {
-                echo "<script>alert('Error al actualizar herramienta ID $id: " . $stmt->error . "'); window.location='reg_salidas.php';</script>";
-                exit;
-            }
-            $stmt->close();
-        }
+    if (json_last_error() !== JSON_ERROR_NONE || !is_array($selectedItems)) {
+        echo "<script>alert('Error en los datos enviados (JSON inválido o no enviado)'); window.location='reg_salidas.php';</script>";
+        exit;
     }
 
-    // Procesar activos
-    if (!empty($selectedItems['activos'])) {
-        $activos = array_values($selectedItems['activos']);
-        $body .= "Activos: (" . implode(", ", $activos) . "), ";
-        $totalItems += count($activos);
+    $conn->begin_transaction();
 
-        foreach ($selectedItems['activos'] as $id => $nombre) {
-            $stmt = $conn->prepare("UPDATE tbl_activos SET ubicacion_activos = 'En instalación' WHERE id_activos = ? AND ubicacion_activos = 'En almacen'");
-            $stmt->bind_param("i", $id);
-            if (!$stmt->execute()) {
-                echo "<script>alert('Error al actualizar activo ID $id: " . $stmt->error . "'); window.location='reg_salidas.php';</script>";
-                exit;
-            }
-            $stmt->close();
-        }
-    }
+    try {
+        // Procesar herramientas
+        if (!empty($selectedItems['herramientas'])) {
+            $herramientas = array_values($selectedItems['herramientas']);
+            $body .= "Herramientas: (" . implode(", ", $herramientas) . "), ";
+            $totalItems += count($herramientas);
 
-    // Procesar consumibles
-    if (!empty($selectedItems['consumibles'])) {
-        $consumibles = [];
-        foreach ($selectedItems['consumibles'] as $id => $data) {
-            $nombre = $data['nombre'];
-            $cantidad = (int)$data['cantidad'];
+            foreach ($selectedItems['herramientas'] as $id => $nombre) {
+                $check_stmt = $conn->prepare("SELECT ubicacion_herramientas FROM tbl_herramientas WHERE id_herramientas = ?");
+                $check_stmt->bind_param("i", $id);
+                $check_stmt->execute();
+                $check_result = $check_stmt->get_result();
+                $row = $check_result->fetch_assoc();
+                $ubicacion_actual = $row['ubicacion_herramientas'];
+                $check_stmt->close();
 
-            // Verificar cantidad disponible y obtener datos del registro original
-            $check_stmt = $conn->prepare("SELECT cantidad_consumibles, id_empresa, estado_consumibles, utilidad_consumibles, id_user FROM tbl_consumibles WHERE id_consumibles = ? AND ubicacion_consumibles = 'En almacen'");
-            $check_stmt->bind_param("i", $id);
-            $check_stmt->execute();
-            $check_result = $check_stmt->get_result();
-            $row = $check_result->fetch_assoc();
-            $cantidad_disponible = $row['cantidad_consumibles'] ?? 0;
-            $id_empresa = $row['id_empresa'];
-            $estado_consumibles = $row['estado_consumibles'];
-            $utilidad_consumibles = $row['utilidad_consumibles'];
-            $id_user_consumible = $row['id_user'];
-            $check_stmt->close();
-
-            if ($cantidad > $cantidad_disponible) {
-                echo "<script>alert('Error: La cantidad solicitada ($cantidad) para $nombre excede la disponible ($cantidad_disponible)'); window.location='reg_salidas.php';</script>";
-                exit;
-            }
-
-            if ($cantidad > 0) {
-                $consumibles[] = "$nombre($cantidad)";
-                $totalItems += $cantidad;
-
-                // Restar la cantidad del registro en almacén
-                $update_stmt = $conn->prepare("UPDATE tbl_consumibles SET cantidad_consumibles = cantidad_consumibles - ? WHERE id_consumibles = ? AND ubicacion_consumibles = 'En almacen'");
-                $update_stmt->bind_param("ii", $cantidad, $id);
-                if (!$update_stmt->execute()) {
-                    echo "<script>alert('Error al actualizar consumible ID $id en almacén: " . $update_stmt->error . "'); window.location='reg_salidas.php';</script>";
-                    exit;
+                if ($ubicacion_actual !== 'En almacen') {
+                    throw new Exception("Error: La herramienta $nombre no está en almacén (ubicación actual: $ubicacion_actual)");
                 }
+
+                $stmt_mov = $conn->prepare("INSERT INTO tbl_movimientos_herramientas (tipo_movimiento, id_herramientas, cantidad, ubicacion_origen, ubicacion_destino, fecha, id_user) 
+                                            VALUES ('salida', ?, 1, 'En almacen', 'En campo', ?, ?)");
+                $stmt_mov->bind_param("isi", $id, $fecha, $id_user);
+                $stmt_mov->execute();
+
+                $update_stmt = $conn->prepare("UPDATE tbl_herramientas SET ubicacion_herramientas = 'En campo' WHERE id_herramientas = ?");
+                $update_stmt->bind_param("i", $id);
+                $update_stmt->execute();
+
+                $stmt_mov->close();
                 $update_stmt->close();
-
-                // Verificar si ya existe un registro "En campo" para este consumible
-                $check_campo_stmt = $conn->prepare("SELECT id_consumibles, cantidad_consumibles FROM tbl_consumibles WHERE nombre_consumibles = ? AND ubicacion_consumibles = 'En campo' AND id_empresa = ?");
-                $check_campo_stmt->bind_param("si", $nombre, $id_empresa);
-                $check_campo_stmt->execute();
-                $campo_result = $check_campo_stmt->get_result();
-
-                if ($campo_result->num_rows > 0) {
-                    // Si existe, sumar la cantidad
-                    $campo_row = $campo_result->fetch_assoc();
-                    $stmt = $conn->prepare("UPDATE tbl_consumibles SET cantidad_consumibles = cantidad_consumibles + ? WHERE id_consumibles = ? AND ubicacion_consumibles = 'En campo'");
-                    $stmt->bind_param("ii", $cantidad, $campo_row['id_consumibles']);
-                } else {
-                    // Si no existe, crear un nuevo registro con todos los campos obligatorios
-                    $stmt = $conn->prepare("INSERT INTO tbl_consumibles (nombre_consumibles, cantidad_consumibles, id_empresa, estado_consumibles, utilidad_consumibles, id_user, ubicacion_consumibles) VALUES (?, ?, ?, ?, ?, ?, 'En campo')");
-                    $stmt->bind_param("siiiii", $nombre, $cantidad, $id_empresa, $estado_consumibles, $utilidad_consumibles, $id_user_consumible);
-                }
-                if (!$stmt->execute()) {
-                    echo "<script>alert('Error al actualizar/insertar consumible $nombre en campo: " . $stmt->error . "'); window.location='reg_salidas.php';</script>";
-                    exit;
-                }
-                $stmt->close();
-                $check_campo_stmt->close();
-
-                // Si la cantidad en almacén llega a 0, eliminar el registro
-                $delete_stmt = $conn->prepare("DELETE FROM tbl_consumibles WHERE id_consumibles = ? AND cantidad_consumibles = 0 AND ubicacion_consumibles = 'En almacen'");
-                $delete_stmt->bind_param("i", $id);
-                $delete_stmt->execute();
-                $delete_stmt->close();
             }
         }
-        if (!empty($consumibles)) {
-            $body .= "Consumibles: [" . implode(", ", $consumibles) . "]";
+
+        // Procesar activos
+        if (!empty($selectedItems['activos'])) {
+            $activos = array_values($selectedItems['activos']);
+            $body .= "Activos: (" . implode(", ", $activos) . "), ";
+            $totalItems += count($activos);
+
+            foreach ($selectedItems['activos'] as $id => $nombre) {
+                $check_stmt = $conn->prepare("SELECT ubicacion_activos FROM tbl_activos WHERE id_activos = ?");
+                $check_stmt->bind_param("i", $id);
+                $check_stmt->execute();
+                $check_result = $check_stmt->get_result();
+                $row = $check_result->fetch_assoc();
+                $ubicacion_actual = $row['ubicacion_activos'];
+                $check_stmt->close();
+
+                if ($ubicacion_actual !== 'En almacen') {
+                    throw new Exception("Error: El activo $nombre no está en almacén (ubicación actual: $ubicacion_actual)");
+                }
+
+                $stmt_mov = $conn->prepare("INSERT INTO tbl_movimientos_activos (tipo_movimiento, id_activos, cantidad, ubicacion_origen, ubicacion_destino, fecha, id_user) 
+                                            VALUES ('salida', ?, 1, 'En almacen', 'En instalación', ?, ?)");
+                $stmt_mov->bind_param("isi", $id, $fecha, $id_user);
+                $stmt_mov->execute();
+
+                $update_stmt = $conn->prepare("UPDATE tbl_activos SET ubicacion_activos = 'En instalación' WHERE id_activos = ?");
+                $update_stmt->bind_param("i", $id);
+                $update_stmt->execute();
+
+                $stmt_mov->close();
+                $update_stmt->close();
+            }
         }
-    }
 
-    // Guardar en la base de datos
-    $stmt = $conn->prepare("INSERT INTO tbl_reg_salidas (titulo, Destino, id_user, body, items) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssisi", $titulo, $destino, $id_user, $body, $totalItems);
-    if (!$stmt->execute()) {
-        echo "<script>alert('Error al registrar la salida: " . $stmt->error . "'); window.location='reg_salidas.php';</script>";
-        exit;
-    }
-    $stmt->close();
+        // Procesar consumibles
+        if (!empty($selectedItems['consumibles'])) {
+            $consumibles = [];
+            foreach ($selectedItems['consumibles'] as $id => $data) {
+                $nombre = $data['nombre'];
+                $cantidad = (int)$data['cantidad'];
 
-    echo "<script>alert('Salida registrada exitosamente'); window.location='reg_salidas.php';</script>";
+                $check_stmt = $conn->prepare("SELECT cantidad_consumibles, ubicacion_consumibles FROM tbl_consumibles WHERE id_consumibles = ?");
+                $check_stmt->bind_param("i", $id);
+                $check_stmt->execute();
+                $check_result = $check_stmt->get_result();
+                $row = $check_result->fetch_assoc();
+                $cantidad_disponible = (int)$row['cantidad_consumibles'];
+                $ubicacion_actual = $row['ubicacion_consumibles'];
+                $check_stmt->close();
+
+                if ($ubicacion_actual !== 'En almacen') {
+                    throw new Exception("Error: El consumible $nombre no está en almacén (ubicación actual: $ubicacion_actual)");
+                }
+
+                if ($cantidad > $cantidad_disponible) {
+                    throw new Exception("Error: La cantidad solicitada ($cantidad) para $nombre excede la disponible ($cantidad_disponible)");
+                }
+
+                if ($cantidad > 0) {
+                    $consumibles[] = "$nombre($cantidad)";
+                    $totalItems += $cantidad;
+
+                    // Registrar la salida de la cantidad seleccionada a "En campo"
+                    $stmt_mov = $conn->prepare("INSERT INTO tbl_movimientos_consumibles (tipo_movimiento, id_consumibles, cantidad, ubicacion_origen, ubicacion_destino, fecha, id_user) 
+                                                VALUES ('salida', ?, ?, 'En almacen', 'En campo', ?, ?)");
+                    $stmt_mov->bind_param("iisi", $id, $cantidad, $fecha, $id_user);
+                    $stmt_mov->execute();
+
+                    // Actualizar tbl_consumibles: restar la cantidad llevada y mantener "En almacen" si queda algo
+                    $new_cantidad = $cantidad_disponible - $cantidad;
+                    $new_ubicacion = $new_cantidad > 0 ? 'En almacen' : 'En campo';
+                    $update_stmt = $conn->prepare("UPDATE tbl_consumibles 
+                                                   SET cantidad_consumibles = ?, 
+                                                       ubicacion_consumibles = ? 
+                                                   WHERE id_consumibles = ?");
+                    $update_stmt->bind_param("isi", $new_cantidad, $new_ubicacion, $id);
+                    $update_stmt->execute();
+
+                    $stmt_mov->close();
+                    $update_stmt->close();
+                }
+            }
+            if (!empty($consumibles)) {
+                $body .= "Consumibles: [" . implode(", ", $consumibles) . "]";
+            }
+        }
+
+        $stmt = $conn->prepare("INSERT INTO tbl_reg_salidas (titulo, Destino, id_user, body, items) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param("ssisi", $titulo, $destino, $id_user, $body, $totalItems);
+        $stmt->execute();
+        $stmt->close();
+
+        $conn->commit();
+        echo "<script>alert('Salida registrada exitosamente'); window.location='reg_salidas.php';</script>";
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo "<script>alert('" . $e->getMessage() . "'); window.location='reg_salidas.php';</script>";
+    }
 }
 ?>
 
-<!-- El resto del HTML permanece igual, pero asegúrate de que el frontend refleje las cantidades correctamente -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -260,7 +284,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 24px;
             cursor: pointer;
         }
-        </style>
+    </style>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             function validarTexto(input) {
@@ -316,16 +340,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 consumibles: {}
             };
 
-            function validarTexto(input) {
-                const regex = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]+$/;
-                return regex.test(input);
-            }
-
-            function restringirEntrada(input) {
-                input.value = input.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, '');
-            }
-
-            // Reemplaza la función agregarElemento por esto:
             document.querySelectorAll('.herramienta-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', function() {
                     const id = this.dataset.id;
@@ -360,7 +374,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if (!cantidadElemento || !errorElemento) return;
                 
-                // Restringir a solo números
                 cantidadElemento.value = cantidadElemento.value.replace(/[^0-9]/g, '');
                 let cantidadDisponible = parseInt(cantidadElemento.max) || 0;
                 let cantidadIngresada = parseInt(cantidadElemento.value) || 0;
@@ -636,4 +649,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </body>
 </html>
-<?php $conexion->close(); ?>
+<?php $conn->close(); ?>

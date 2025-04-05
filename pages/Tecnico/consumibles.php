@@ -103,6 +103,19 @@ $result = $conn->query($sql);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             z-index: 1000; 
         }
+        #addBtn {
+            background-color: rgb(3, 70, 141);
+            color: white !important;
+            border: none;
+            padding: 8px 15px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+        #addBtn:hover {
+            background-color: rgb(3, 24, 46);
+        }
         .excelBtn {
             background-color: #28a745;
             color: white !important;
@@ -190,6 +203,74 @@ $result = $conn->query($sql);
         .filter-dropdown.active {
             display: block;
         }
+        .icon-btn {
+            background: none;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s ease;
+        }
+        .edit-icon-btn {
+            color:rgb(243, 126, 2);
+        }
+        .edit-icon-btn:hover {
+            color:rgb(163, 87, 5);
+            transform: scale(1.1);
+        }
+        .delete-icon-btn {
+            color: #dc3545;
+        }
+        .delete-icon-btn:hover {
+            color: #b02a37;
+            transform: scale(1.1);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .modal-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .confirmBtn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .confirmBtn:hover {
+            background-color:rgb(159, 38, 50);
+        }
+        .cancelBtn {
+            background-color:rgb(30, 172, 59);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .cancelBtn:hover {
+            background-color:rgb(23, 99, 23);
+        }
     </style>
 </head>
 <body class="bg-[var(--beige)]">
@@ -210,10 +291,20 @@ $result = $conn->query($sql);
             <h1 class="title text-shadow">Inventario de Consumibles</h1>    
         </strong>
         <div class="button-container">
-            <a href="../../EXCEL/generate_con_xls.php">
-                <button class="excelBtn">Descargar Excel</button>
-            </a>
-            <form action="../../PDF/generate_con_pdf.php" method="post">
+            <form id="excelForm" action="../../EXCEL/generate_con_xls.php" method="post">
+                <input type="hidden" name="filter_empresa" id="excel_filter_empresa" value="">
+                <input type="hidden" name="filter_estado" id="excel_filter_estado" value="">
+                <input type="hidden" name="filter_utilidad" id="excel_filter_utilidad" value="">
+                <input type="hidden" name="filter_usuario" id="excel_filter_usuario" value="">
+                <input type="hidden" name="filter_search" id="excel_filter_search" value="">
+                <button type="submit" class="excelBtn">Descargar Excel</button>
+            </form>
+            <form id="pdfForm" action="../../PDF/generate_con_pdf.php" method="post">
+                <input type="hidden" name="filter_empresa" id="filter_empresa" value="">
+                <input type="hidden" name="filter_estado" id="filter_estado" value="">
+                <input type="hidden" name="filter_utilidad" id="filter_utilidad" value="">
+                <input type="hidden" name="filter_usuario" id="filter_usuario" value="">
+                <input type="hidden" name="filter_search" id="filter_search" value="">
                 <button type="submit" class="pdfBtn">Descargar PDF</button>
             </form>
         </div>   
@@ -329,11 +420,15 @@ $result = $conn->query($sql);
             empresa: '',
             estado: '',
             utilidad: '',
-            usuario: ''
+            usuario: '',
+            search: ''
         };
 
         function applyFilters() {
-            const nombreTerm = searchNombre.value.toLowerCase();
+        const nombreTerm = searchNombre.value.toLowerCase();
+        filters.search = nombreTerm;
+
+        console.log('Filtros actuales:', filters); // Depuración
 
             for (let i = 1; i < rows.length; i++) {
                 const nombre = rows[i].getElementsByTagName('td')[1].textContent.toLowerCase();
@@ -354,6 +449,27 @@ $result = $conn->query($sql);
                     rows[i].style.display = 'none';
                 }
             }
+
+            // Actualizar campos ocultos
+            document.getElementById('filter_empresa').value = filters.empresa;
+            document.getElementById('filter_estado').value = filters.estado;
+            document.getElementById('filter_utilidad').value = filters.utilidad;
+            document.getElementById('filter_usuario').value = filters.usuario;
+            document.getElementById('filter_search').value = filters.search;
+
+            document.getElementById('excel_filter_empresa').value = filters.empresa;
+            document.getElementById('excel_filter_estado').value = filters.estado;
+            document.getElementById('excel_filter_utilidad').value = filters.utilidad;
+            document.getElementById('excel_filter_usuario').value = filters.usuario;
+            document.getElementById('excel_filter_search').value = filters.search;
+            
+            console.log('Campos ocultos actualizados:', {
+                filter_empresa: document.getElementById('filter_empresa').value,
+                filter_estado: document.getElementById('filter_estado').value,
+                filter_utilidad: document.getElementById('filter_utilidad').value,
+                filter_usuario: document.getElementById('filter_usuario').value,
+                filter_search: document.getElementById('filter_search').value
+            }); // Depuración
         }
 
         searchNombre.addEventListener('keyup', applyFilters);

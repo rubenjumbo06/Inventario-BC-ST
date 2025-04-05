@@ -1,7 +1,31 @@
 <?php
-session_start();
-$error = '';
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+header("Expires: Thu, 01 Jan 1970 00:00:00 GMT");
 
+session_start();
+
+// Limpiar la sesión solo en solicitudes GET (página inicial)
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    $_SESSION = [];
+    if (ini_get("session.use_cookies")) {
+        $params = session_get_cookie_params();
+        setcookie(
+            session_name(),
+            '',
+            time() - 42000,
+            $params["path"],
+            $params["domain"],
+            $params["secure"],
+            $params["httponly"]
+        );
+    }
+    session_destroy();
+    session_start();
+}
+
+$error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'];
     $password = $_POST['password'];
@@ -11,36 +35,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt = $conn->prepare($query);
     $stmt->bind_param('s', $username);
 
-    $stmt->execute();
-    $result = $stmt->get_result();
+    if ($stmt->execute()) {
+        $result = $stmt->get_result();
+        if ($result->num_rows === 1) {
+            $user = $result->fetch_assoc();
+            if (password_verify($password, $user['password'])) {
+                session_regenerate_id(true);
+                $_SESSION['id_user'] = $user['id_user'];
+                $_SESSION['username'] = $user['username'];
+                $_SESSION['role'] = $user['role'];
 
-    if ($result->num_rows === 1) {
-        $users = $result->fetch_assoc();
-       
-        if (password_verify($password, $users['password'])) {
-            session_start();
-            $_SESSION['id_user'] = $users['id_user'];
-            $_SESSION['username'] = $users['username'];
-            $_SESSION['role'] = $users['role'];
-
-            switch ($users['role']) {
-                case 'admin':
-                    header('Location: pages/Admin/index.php');
-                    exit;
-                case 'user':
-                    header('Location: pages/Usuario/indexus.php');
-                    exit;
-                case 'tecnico':
-                    header('Location: pages/Tecnico/indextec.php');
-                    exit;
-                default:
-                    $error = 'Rol de usuario desconocido.';
+                switch ($user['role']) {
+                    case 'admin':
+                        header('Location: pages/Admin/index.php');
+                        exit;
+                    case 'user':
+                        header('Location: pages/Usuario/indexus.php');
+                        exit;
+                    case 'tecnico':
+                        header('Location: pages/Tecnico/indextec.php');
+                        exit;
+                    default:
+                        $error = 'Rol de usuario desconocido';
+                }
+            } else {
+                $error = 'Usuario o contraseña incorrectos';
             }
         } else {
-            $error = 'Usuario o contraseña incorrectos.';
+            $error = 'Usuario no encontrado';
         }
     } else {
-        $error = 'Usuario no encontrado.';
+        $error = 'Error en la consulta';
     }
     $stmt->close();
 }
@@ -54,16 +79,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../assets/CSS/style.css">
     <script>
-        // Función para limpiar los campos del formulario
         function clearForm() {
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
         }
 
-        // Limpiar los campos cuando el formulario se envíe
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('loginForm').addEventListener('submit', function() {
                 setTimeout(clearForm, 0);
+            });
+
+            window.addEventListener('pageshow', function(event) {
+                if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+                    window.location.reload(true);
+                }
             });
         });
     </script>
@@ -72,18 +101,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="max-w-[100%] mx-auto">
         <div class="flex justify-center items-center bg-[#AABF70] p-6 sm:p-8 rounded-lg shadow-lg w-full max-w-3xl mx-auto mt-10">
             <div class="bg-[#D9D2B0] p-6 sm:p-12 rounded-lg flex flex-col sm:flex-row items-center gap-6 sm:gap-12 w-full">
-                
-                <!-- Mensajes de error o éxito -->
                 <?php if (!empty($error)): ?>
                     <div class="w-full text-center text-red-500 font-semibold">
                         <?php echo htmlspecialchars($error); ?>
                     </div>
                 <?php endif; ?>
-
-                <!-- Formulario -->
                 <div class="flex-1 flex flex-col justify-center items-center text-left w-full max-w-[90%] sm:max-w-md mx-auto px-4">
                     <h2 class="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-white text-center">Ingresa a tu cuenta:</h2>
-                    <form id="loginForm" class="mt-6 sm:mt-10 space-y-4 sm:space-y-6 w-full" action="#" method="POST">
+                    <form id="loginForm" class="mt-6 sm:mt-10 space-y-4 sm:space-y-6 w-full" action="login.php" method="POST">
                         <div>
                             <label for="username" class="block text-sm font-medium text-white">Usuario:</label>
                             <input type="text" id="username" name="username" class="w-full px-4 py-2 rounded bg-[#D9D9D9] text-gray-900" required>
@@ -99,11 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </form>
                 </div>
-                
-                <!-- Línea separadora (solo en pantallas grandes) -->
                 <div class="hidden sm:block w-px bg-white h-auto min-h-[300px]"></div>
-                
-                <!-- Imagen -->
                 <img class="hidden sm:block h-auto w-full sm:w-[250px] object-cover rounded-lg" src="assets/img/inv .png" alt="Imagen de Starnet">
             </div>
         </div>

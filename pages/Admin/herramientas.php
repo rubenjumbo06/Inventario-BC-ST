@@ -8,7 +8,7 @@ $role = $_SESSION['role'];
 
 require_once("../../conexion.php"); 
 
-// Consulta principal con JOINs correctos
+// Consulta principal con JOINs y filtro de id_status = 1
 $sql = "SELECT h.id_herramientas, h.nombre_herramientas, h.cantidad_herramientas, 
         h.id_empresa, e.nombre, 
         h.estado_herramientas, es.nombre_estado, 
@@ -17,30 +17,35 @@ $sql = "SELECT h.id_herramientas, h.nombre_herramientas, h.cantidad_herramientas
         FROM tbl_herramientas h
         LEFT JOIN tbl_empresa e ON h.id_empresa = e.id_empresa
         LEFT JOIN tbl_estados es ON h.estado_herramientas = es.id_estado
-        LEFT JOIN tbl_utilidad u ON h.utilidad_herramientas = u.id_utilidad";
+        LEFT JOIN tbl_utilidad u ON h.utilidad_herramientas = u.id_utilidad
+        WHERE h.id_status = 1";
 $result = $conn->query($sql);
 
 // Consultas para filtros desplegables
 $empresas_sql = "SELECT DISTINCT e.id_empresa, e.nombre 
                  FROM tbl_empresa e 
                  INNER JOIN tbl_herramientas h ON e.id_empresa = h.id_empresa 
+                 WHERE h.id_status = 1 
                  ORDER BY e.nombre";
 $empresas_result = $conn->query($empresas_sql);
 
 $estados_sql = "SELECT DISTINCT es.id_estado, es.nombre_estado 
                 FROM tbl_estados es 
                 INNER JOIN tbl_herramientas h ON es.id_estado = h.estado_herramientas 
+                WHERE h.id_status = 1 
                 ORDER BY es.nombre_estado";
 $estados_result = $conn->query($estados_sql);
 
 $utilidades_sql = "SELECT DISTINCT u.id_utilidad, u.nombre_utilidad 
                    FROM tbl_utilidad u 
                    INNER JOIN tbl_herramientas h ON u.id_utilidad = h.utilidad_herramientas 
+                   WHERE h.id_status = 1 
                    ORDER BY u.nombre_utilidad";
 $utilidades_result = $conn->query($utilidades_sql);
 
 $ubicaciones_sql = "SELECT DISTINCT ubicacion_herramientas 
                     FROM tbl_herramientas 
+                    WHERE id_status = 1 
                     ORDER BY ubicacion_herramientas";
 $ubicaciones_result = $conn->query($ubicaciones_sql);
 ?>
@@ -180,13 +185,81 @@ $ubicaciones_result = $conn->query($ubicaciones_sql);
         .filter-dropdown.active {
             display: block;
         }
+        .icon-btn {
+            background: none;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s ease;
+        }
+        .edit-icon-btn {
+            color: rgb(243, 126, 2);
+        }
+        .edit-icon-btn:hover {
+            color: rgb(163, 87, 5);
+            transform: scale(1.1);
+        }
+        .delete-icon-btn {
+            color: #dc3545;
+        }
+        .delete-icon-btn:hover {
+            color: #b02a37;
+            transform: scale(1.1);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .modal-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .confirmBtn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .confirmBtn:hover {
+            background-color: rgb(159, 38, 50);
+        }
+        .cancelBtn {
+            background-color: rgb(30, 172, 59);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .cancelBtn:hover {
+            background-color: rgb(23, 99, 23);
+        }
     </style>
 </head>
 <body class="bg-[var(--beige)]">
 <?php include '../header.php'; ?>
 <?php include 'sidebarad.php'; ?>
-
 <div class="main-content">
+<?php include '../../Uses/msg.php'; ?>
     <div class="flex justify-between items-center mt-4 px-4">
         <p class="text-white text-sm sm:text-lg text-shadow">
             <strong>User:</strong> <?php echo htmlspecialchars($_SESSION['username']); ?> 
@@ -291,22 +364,54 @@ $ubicaciones_result = $conn->query($ubicaciones_sql);
                 <?php while ($row = $result->fetch_assoc()): ?>
                 <tr>
                     <td><?php echo $row['id_herramientas']; ?></td>
-                    <td><?php echo $row['nombre_herramientas']; ?></td>
+                    <td><?php echo htmlspecialchars($row['nombre_herramientas']); ?></td>
                     <td><?php echo $row['cantidad_herramientas']; ?></td>
-                    <td><?php echo $row['nombre']; ?></td>
-                    <td><?php echo $row['nombre_estado']; ?></td>
-                    <td><?php echo $row['nombre_utilidad']; ?></td>
-                    <td><?php echo $row['ubicacion_herramientas']; ?></td>
+                    <td><?php echo htmlspecialchars($row['nombre']); ?></td>
+                    <td><?php echo htmlspecialchars($row['nombre_estado']); ?></td>
+                    <td><?php echo htmlspecialchars($row['nombre_utilidad']); ?></td>
+                    <td><?php echo htmlspecialchars($row['ubicacion_herramientas']); ?></td>
                     <td><?php echo $row['fecha_ingreso']; ?></td>
                     <td>
                         <a href="../../Uses/editarherr.php?id_herramientas=<?php echo $row['id_herramientas']; ?>">
-                            <button class="editBtn">Editar</button>
+                            <button class="edit-icon-btn icon-btn" title="Editar">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+                                </svg>
+                            </button>
                         </a>
+                        <button class="delete-icon-btn icon-btn deleteBtn" 
+                                data-id="<?php echo $row['id_herramientas']; ?>" 
+                                data-nombre="<?php echo htmlspecialchars($row['nombre_herramientas']); ?>" 
+                                data-cantidad="<?php echo $row['cantidad_herramientas']; ?>" 
+                                data-empresa="<?php echo htmlspecialchars($row['nombre']); ?>" 
+                                data-estado="<?php echo htmlspecialchars($row['nombre_estado']); ?>" 
+                                data-utilidad="<?php echo htmlspecialchars($row['nombre_utilidad']); ?>" 
+                                data-ubicacion="<?php echo htmlspecialchars($row['ubicacion_herramientas']); ?>" 
+                                data-fecha="<?php echo $row['fecha_ingreso']; ?>"
+                                title="Eliminar">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M5.5 5.5A.5.5 0 0 1 6 5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1-.5-.5z"/>
+                                <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1z"/>
+                            </svg>
+                        </button>
                     </td>
                 </tr>
                 <?php endwhile; ?>
             </tbody>
         </table>
+
+        <!-- Modal de confirmación -->
+        <div id="deleteModal" class="modal">
+            <div class="modal-content">
+                <h2>Confirmar Eliminación</h2>
+                <p>¿Estás seguro de que deseas eliminar esta herramienta?</p>
+                <div id="modalData"></div>
+                <div class="modal-buttons">
+                    <button id="confirmDelete" class="confirmBtn">Confirmar</button>
+                    <button id="cancelDelete" class="cancelBtn">Cancelar</button>
+                </div>
+            </div>
+        </div>
     </main>
 </div>
 
@@ -412,14 +517,104 @@ $ubicaciones_result = $conn->query($ubicaciones_sql);
                 });
             }
         });
+
+        // Funcionalidad del modal de eliminación
+        const modal = document.getElementById('deleteModal');
+        const modalData = document.getElementById('modalData');
+        const confirmDelete = document.getElementById('confirmDelete');
+        const cancelDelete = document.getElementById('cancelDelete');
+        const notification = document.getElementById('notification');
+        let currentId = null;
+
+        document.querySelectorAll('.deleteBtn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                currentId = this.dataset.id;
+                const nombre = this.dataset.nombre;
+                const cantidad = this.dataset.cantidad;
+                const empresa = this.dataset.empresa;
+                const estado = this.dataset.estado;
+                const utilidad = this.dataset.utilidad;
+                const ubicacion = this.dataset.ubicacion;
+                const fecha = this.dataset.fecha;
+
+                modalData.innerHTML = `
+                    <p><strong>ID:</strong> ${currentId}</p>
+                    <p><strong>Nombre:</strong> ${nombre}</p>
+                    <p><strong>Cantidad:</strong> ${cantidad}</p>
+                    <p><strong>Empresa:</strong> ${empresa}</p>
+                    <p><strong>Estado:</strong> ${estado}</p>
+                    <p><strong>Utilidad:</strong> ${utilidad}</p>
+                    <p><strong>Ubicación:</strong> ${ubicacion}</p>
+                    <p><strong>Fecha Ingreso:</strong> ${fecha}</p>
+                `;
+                modal.style.display = 'block';
+            });
+        });
+
+        cancelDelete.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+
+        confirmDelete.addEventListener('click', function() {
+            fetch('../../Uses/eliminarherr.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `id_herramientas=${encodeURIComponent(currentId)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const rows = document.querySelectorAll('tbody tr');
+                    rows.forEach(row => {
+                        const idCell = row.querySelector('td:first-child');
+                        if (idCell && idCell.textContent === currentId) {
+                            row.remove();
+                        }
+                    });
+                    modal.style.display = 'none';
+                    showNotification('La herramienta ha sido eliminada correctamente');
+                } else {
+                    showNotification('Error al ocultar la herramienta: ' + (data.message || 'Error desconocido'), true);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Ocurrió un error al intentar ocultar la herramienta.', true);
+            });
+        });
+
+        window.addEventListener('click', function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        });
+
         // Actualizar los filtros al enviar los formularios
         pdfForm.addEventListener('submit', function(e) {
-            applyFilters(); // Asegurarse de que los campos ocultos estén actualizados antes de enviar
+            applyFilters();
         });
 
         excelForm.addEventListener('submit', function(e) {
-            applyFilters(); // Asegurarse de que los campos ocultos estén actualizados antes de enviar
+            applyFilters();
         });
+
+        // Función para mostrar notificaciones dinámicas
+        function showNotification(message, isError = false) {
+            const notification = document.getElementById('notification');
+            const notificationText = notification.querySelector('span:first-child');
+            notificationText.textContent = message;
+            notification.classList.remove('hidden');
+            if (isError) {
+                notification.classList.add('error');
+            } else {
+                notification.classList.remove('error');
+            }
+            setTimeout(() => {
+                notification.classList.add('hidden');
+            }, 5000);
+        }
     });
 </script>
 </body>

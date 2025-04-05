@@ -291,10 +291,20 @@ $result = $conn->query($sql);
             <h1 class="title text-shadow">Inventario de Consumibles</h1>    
         </strong>
         <div class="button-container">
-            <a href="../../EXCEL/generate_con_xls.php">
-                <button class="excelBtn">Descargar Excel</button>
-            </a>
-            <form action="../../PDF/generate_con_pdf.php" method="post">
+            <form id="excelForm" action="../../EXCEL/generate_con_xls.php" method="post">
+                <input type="hidden" name="filter_empresa" id="excel_filter_empresa" value="">
+                <input type="hidden" name="filter_estado" id="excel_filter_estado" value="">
+                <input type="hidden" name="filter_utilidad" id="excel_filter_utilidad" value="">
+                <input type="hidden" name="filter_usuario" id="excel_filter_usuario" value="">
+                <input type="hidden" name="filter_search" id="excel_filter_search" value="">
+                <button type="submit" class="excelBtn">Descargar Excel</button>
+            </form>
+            <form id="pdfForm" action="../../PDF/generate_con_pdf.php" method="post">
+                <input type="hidden" name="filter_empresa" id="filter_empresa" value="">
+                <input type="hidden" name="filter_estado" id="filter_estado" value="">
+                <input type="hidden" name="filter_utilidad" id="filter_utilidad" value="">
+                <input type="hidden" name="filter_usuario" id="filter_usuario" value="">
+                <input type="hidden" name="filter_search" id="filter_search" value="">
                 <button type="submit" class="pdfBtn">Descargar PDF</button>
             </form>
         </div>   
@@ -377,19 +387,6 @@ $result = $conn->query($sql);
                 <?php endwhile; ?>
             </tbody>
         </table>
-
-        <!-- Modal de confirmación -->
-        <div id="deleteModal" class="modal">
-            <div class="modal-content">
-                <h2>Confirmar Eliminación</h2>
-                <p>¿Estás seguro de que deseas eliminar este consumible?</p>
-                <div id="modalData"></div>
-                <div class="modal-buttons">
-                    <button id="confirmDelete" class="confirmBtn">Confirmar</button>
-                    <button id="cancelDelete" class="cancelBtn">Cancelar</button>
-                </div>
-            </div>
-        </div>
     </main>
 </div>
 
@@ -423,11 +420,15 @@ $result = $conn->query($sql);
             empresa: '',
             estado: '',
             utilidad: '',
-            usuario: ''
+            usuario: '',
+            search: '' // Agregamos 'search' para rastrear el término de búsqueda
         };
 
         function applyFilters() {
-            const nombreTerm = searchNombre.value.toLowerCase();
+        const nombreTerm = searchNombre.value.toLowerCase();
+        filters.search = nombreTerm;
+
+        console.log('Filtros actuales:', filters); // Depuración
 
             for (let i = 1; i < rows.length; i++) {
                 const nombre = rows[i].getElementsByTagName('td')[1].textContent.toLowerCase();
@@ -448,6 +449,27 @@ $result = $conn->query($sql);
                     rows[i].style.display = 'none';
                 }
             }
+
+            // Actualizar campos ocultos
+            document.getElementById('filter_empresa').value = filters.empresa;
+            document.getElementById('filter_estado').value = filters.estado;
+            document.getElementById('filter_utilidad').value = filters.utilidad;
+            document.getElementById('filter_usuario').value = filters.usuario;
+            document.getElementById('filter_search').value = filters.search;
+
+            document.getElementById('excel_filter_empresa').value = filters.empresa;
+            document.getElementById('excel_filter_estado').value = filters.estado;
+            document.getElementById('excel_filter_utilidad').value = filters.utilidad;
+            document.getElementById('excel_filter_usuario').value = filters.usuario;
+            document.getElementById('excel_filter_search').value = filters.search;
+            
+            console.log('Campos ocultos actualizados:', {
+                filter_empresa: document.getElementById('filter_empresa').value,
+                filter_estado: document.getElementById('filter_estado').value,
+                filter_utilidad: document.getElementById('filter_utilidad').value,
+                filter_usuario: document.getElementById('filter_usuario').value,
+                filter_search: document.getElementById('filter_search').value
+            }); // Depuración
         }
 
         searchNombre.addEventListener('keyup', applyFilters);
@@ -480,83 +502,6 @@ $result = $conn->query($sql);
                 document.querySelectorAll('.filter-dropdown').forEach(dropdown => {
                     dropdown.classList.remove('active');
                 });
-            }
-        });
-
-        // Funcionalidad del modal de eliminación
-        const modal = document.getElementById('deleteModal');
-        const modalData = document.getElementById('modalData');
-        const confirmDelete = document.getElementById('confirmDelete');
-        const cancelDelete = document.getElementById('cancelDelete');
-        let currentId = null;
-
-        document.querySelectorAll('.deleteBtn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                console.log('Botón Eliminar clicado, ID:', this.dataset.id);
-                currentId = this.dataset.id;
-                const nombre = this.dataset.nombre;
-                const cantidad = this.dataset.cantidad;
-                const empresa = this.dataset.empresa;
-                const estado = this.dataset.estado;
-                const utilidad = this.dataset.utilidad;
-                const fecha = this.dataset.fecha;
-                const usuario = this.dataset.usuario;
-
-                modalData.innerHTML = `
-                    <p><strong>ID:</strong> ${currentId}</p>
-                    <p><strong>Nombre:</strong> ${nombre}</p>
-                    <p><strong>Cantidad:</strong> ${cantidad}</p>
-                    <p><strong>Empresa:</strong> ${empresa}</p>
-                    <p><strong>Estado:</strong> ${estado}</p>
-                    <p><strong>Utilidad:</strong> ${utilidad}</p>
-                    <p><strong>Fecha Ingreso:</strong> ${fecha}</p>
-                    <p><strong>Usuario:</strong> ${usuario}</p>
-                `;
-                modal.style.display = 'block';
-            });
-        });
-
-        cancelDelete.addEventListener('click', function() {
-            modal.style.display = 'none';
-        });
-
-        confirmDelete.addEventListener('click', function() {
-            console.log('Confirmando eliminación, ID:', currentId);
-            fetch('../../Uses/eliminarcon.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `id_consumibles=${encodeURIComponent(currentId)}`
-            })
-            .then(response => {
-                console.log('Estado de la respuesta:', response.status, response.statusText);
-                return response.json();
-            })
-            .then(data => {
-                console.log('Datos parseados:', data);
-                if (data.success) {
-                    const rows = document.querySelectorAll('tbody tr');
-                    rows.forEach(row => {
-                        const idCell = row.querySelector('td:first-child');
-                        if (idCell && idCell.textContent === currentId) {
-                            row.remove();
-                        }
-                    });
-                    modal.style.display = 'none';
-                } else {
-                    alert('Error al eliminar el consumible: ' + (data.message || 'Unknown error'));
-                }
-            })
-            .catch(error => {
-                console.error('Error en la solicitud:', error);
-                alert('Ocurrió un error al intentar eliminar el consumible: ' + error.message);
-            });
-        });
-
-        window.addEventListener('click', function(event) {
-            if (event.target == modal) {
-                modal.style.display = 'none';
             }
         });
     });

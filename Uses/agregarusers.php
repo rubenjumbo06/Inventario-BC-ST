@@ -34,7 +34,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             // Ejecutar la consulta
             if ($stmt->execute()) {
-                header("Refresh: 1; URL=../pages/Admin/users.php");
+                header("Refresh: 1; URL=../pages/Admin/users.php?action=added&table=users");
                 exit(); 
             } else {
                 $mensaje = "Error al guardar los datos: " . $stmt->error;

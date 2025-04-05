@@ -56,7 +56,7 @@ $users_result = $conn->query($users_sql);
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             z-index: 1000; 
         }
-        .excelBtn {
+        .excelBtn, .pdfBtn {
             background-color: #28a745;
             color: white !important;
             border: none;
@@ -71,13 +71,6 @@ $users_result = $conn->query($users_sql);
         }
         .pdfBtn {
             background-color: #dc3545;
-            color: white !important;
-            border: none;
-            padding: 8px 15px;
-            cursor: pointer;
-            border-radius: 5px;
-            font-size: 14px;
-            transition: background-color 0.3s ease;
         }
         .pdfBtn:hover {
             background-color: rgb(167, 35, 31);
@@ -88,14 +81,13 @@ $users_result = $conn->query($users_sql);
             gap: 10px;
             margin-top: 20px;
         }
-        /* Estilos para los campos de búsqueda */
         .search-container {
             margin: 20px 0;
             text-align: center;
             display: flex;
             justify-content: center;
             gap: 10px;
-            flex-wrap: wrap; /* Permite que se ajusten en pantallas pequeñas */
+            flex-wrap: wrap;
         }
         .search-container input[type="text"],
         .search-container input[type="date"] {
@@ -125,7 +117,6 @@ $users_result = $conn->query($users_sql);
             font-weight: bold;
             font-size: 14px; 
         }
-        /* Estilos para el filtro desplegable */
         .filter-container {
             position: relative;
             display: inline-block;
@@ -188,10 +179,18 @@ $users_result = $conn->query($users_sql);
             <h1 class="title text-shadow">Tabla de Entradas</h1>    
         </strong>
         <div class="button-container">
-            <a href="../../EXCEL/generate_ent_xls.php">
-                <button class="excelBtn">Descargar Excel</button>
-            </a>
-            <form action="../../PDF/generate_ent_pdf.php" method="post">
+            <!-- Formulario para Excel -->
+            <form action="../../EXCEL/generate_ent_xls.php" method="POST">
+                <input type="hidden" name="titulo" id="excel_titulo">
+                <input type="hidden" name="fecha_desde" id="excel_fecha_desde">
+                <input type="hidden" name="fecha_hasta" id="excel_fecha_hasta">
+                <button type="submit" class="excelBtn">Descargar Excel</button>
+            </form>
+            <!-- Formulario para PDF -->
+            <form action="../../PDF/generate_ent_pdf.php" method="POST">
+                <input type="hidden" name="titulo" id="pdf_titulo">
+                <input type="hidden" name="fecha_desde" id="pdf_fecha_desde">
+                <input type="hidden" name="fecha_hasta" id="pdf_fecha_hasta">
                 <button type="submit" class="pdfBtn">Descargar PDF</button>
             </form>
         </div> 
@@ -228,6 +227,7 @@ $users_result = $conn->query($users_sql);
                             </div>
                         </div>
                     </th>
+                    <th>Acción</th>
                 </tr>
             </thead>
             <tbody>
@@ -239,6 +239,12 @@ $users_result = $conn->query($users_sql);
                     <td><?php echo $row['titulo']; ?></td>
                     <td><?php echo $row['body']; ?></td>
                     <td><?php echo $row['username']; ?></td>
+                    <td>
+                        <form action="../../PDF/generate_row_ent_pdf.php" method="POST" target="_blank">
+                            <input type="hidden" name="id_entradas" value="<?php echo $row['id_entradas']; ?>">
+                            <button type="submit" class="pdfBtn">Descargar PDF</button>
+                        </form>
+                    </td>
                 </tr>
                 <?php endwhile; ?>
             </tbody>
@@ -261,13 +267,12 @@ $users_result = $conn->query($users_sql);
             });
             const fechaHoraElemento = document.getElementById("fechaHora");
             if (fechaHoraElemento) {
-                fechaHoraElemento.textContent = Fecha/Hora Ingreso: ${fechaHoraFormateada};
+                fechaHoraElemento.textContent = `Fecha/Hora Ingreso: ${fechaHoraFormateada}`;
             }
         }
         actualizarFechaHora();
         setInterval(actualizarFechaHora, 1000);
 
-        // Funcionalidad de búsqueda y filtrado
         const searchTitulo = document.getElementById('searchTitulo');
         const searchFechaDesde = document.getElementById('searchFechaDesde');
         const searchFechaHasta = document.getElementById('searchFechaHasta');
@@ -280,13 +285,21 @@ $users_result = $conn->query($users_sql);
 
         function applyFilters() {
             const tituloTerm = searchTitulo.value.toLowerCase();
-            const fechaDesde = searchFechaDesde.value; // Formato YYYY-MM-DD
-            const fechaHasta = searchFechaHasta.value; // Formato YYYY-MM-DD
+            const fechaDesde = searchFechaDesde.value;
+            const fechaHasta = searchFechaHasta.value;
 
-            for (let i = 1; i < rows.length; i++) { // Empezamos en 1 para saltar el encabezado
-                const titulo = rows[i].getElementsByTagName('td')[3].textContent.toLowerCase(); // Columna "Título"
-                const fecha = rows[i].getElementsByTagName('td')[1].textContent.split(' ')[0]; // Columna "Fecha" (solo fecha)
-                const usuario = rows[i].getElementsByTagName('td')[5].textContent; // Columna "Usuario"
+            // Actualizar los campos ocultos para PDF y Excel
+            document.getElementById('pdf_titulo').value = tituloTerm;
+            document.getElementById('pdf_fecha_desde').value = fechaDesde;
+            document.getElementById('pdf_fecha_hasta').value = fechaHasta;
+            document.getElementById('excel_titulo').value = tituloTerm;
+            document.getElementById('excel_fecha_desde').value = fechaDesde;
+            document.getElementById('excel_fecha_hasta').value = fechaHasta;
+
+            for (let i = 1; i < rows.length; i++) {
+                const titulo = rows[i].getElementsByTagName('td')[3].textContent.toLowerCase();
+                const fecha = rows[i].getElementsByTagName('td')[1].textContent.split(' ')[0];
+                const usuario = rows[i].getElementsByTagName('td')[5].textContent;
 
                 const matchesTitulo = !tituloTerm || titulo.includes(tituloTerm);
 
@@ -319,7 +332,6 @@ $users_result = $conn->query($users_sql);
         searchFechaDesde.addEventListener('change', applyFilters);
         searchFechaHasta.addEventListener('change', applyFilters);
 
-        // Manejo del filtro desplegable
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const dropdown = this.nextElementSibling;
@@ -339,7 +351,6 @@ $users_result = $conn->query($users_sql);
             });
         });
 
-        // Cerrar dropdown al hacer clic fuera
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.filter-container')) {
                 document.querySelectorAll('.filter-dropdown').forEach(dropdown => {

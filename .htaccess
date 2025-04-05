@@ -1,0 +1,13 @@
+ErrorDocument 404 /Inventario/404.php
+
+# Forzar no caché en PHP (especialmente para Chrome)
+<FilesMatch "\.(php)$">
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+</FilesMatch>
+
+# Evitar acceso directo a páginas protegidas
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(pages/.+|index\.php|indexus\.php|indextec\.php)$ /Inventario/404.php [L,R=404]

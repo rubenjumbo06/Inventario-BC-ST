@@ -117,7 +117,7 @@ try {
             if ($stmt->execute()) {
                 $_SESSION['success'] = 'Empresa actualizada correctamente';
                 ob_end_clean();
-                header("Location: ../pages/Admin/empresa.php");
+                header("Location: ../pages/Admin/empresa.php?action=updated&table=empresa");
                 exit();
             } else {
                 throw new Exception("Error al actualizar la empresa: " . $stmt->error);

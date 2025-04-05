@@ -189,12 +189,22 @@ $users_result = $conn->query($users_sql);
             <h1 class="title text-shadow">Tabla de Salidas</h1>    
         </strong>
         <div class="button-container">
-            <a href="../../EXCEL/generate_sal_xls.php">
-                <button class="excelBtn">Descargar Excel</button>
-            </a>
-            <form action="../../PDF/generate_sal_pdf.php" method="post">
-                <button type="submit" class="pdfBtn">Descargar PDF</button>
-            </form>
+        <form id="excelForm" action="../../EXCEL/generate_sal_xls.php" method="post" style="display:inline;">
+            <input type="hidden" name="titulo" id="excelTitulo">
+            <input type="hidden" name="destino" id="excelDestino">
+            <input type="hidden" name="fechaDesde" id="excelFechaDesde">
+            <input type="hidden" name="fechaHasta" id="excelFechaHasta">
+            <input type="hidden" name="usuario" id="excelUsuario">
+            <button type="submit" class="excelBtn">Descargar Excel</button>
+        </form>
+        <form id="pdfForm" action="../../PDF/generate_sal_pdf.php" method="post" style="display:inline;">
+            <input type="hidden" name="titulo" id="pdfTitulo">
+            <input type="hidden" name="destino" id="pdfDestino">
+            <input type="hidden" name="fechaDesde" id="pdfFechaDesde">
+            <input type="hidden" name="fechaHasta" id="pdfFechaHasta">
+            <input type="hidden" name="usuario" id="pdfUsuario">
+            <button type="submit" class="pdfBtn">Descargar PDF</button>
+        </form>
         </div> 
         <div class="search-container">
             <input type="text" id="searchTitulo" placeholder="Buscar por nombre de salida...">
@@ -231,6 +241,7 @@ $users_result = $conn->query($users_sql);
                             </div>
                         </div>
                     </th>
+                    <th>Acción</th>
                 </tr>
             </thead>
             <tbody>
@@ -243,13 +254,18 @@ $users_result = $conn->query($users_sql);
                     <td><?php echo $row['Destino']; ?></td>
                     <td><?php echo $row['body']; ?></td>
                     <td><?php echo $row['username']; ?></td>
+                    <td>
+                        <form action="../../PDF/generate_row_sal_pdf.php" method="POST" target="_blank">
+                            <input type="hidden" name="id_salidas" value="<?php echo $row['id_salidas']; ?>">
+                            <button type="submit" class="pdfBtn">Descargar PDF</button>
+                        </form>
+                    </td>
                 </tr>
                 <?php endwhile; ?>
             </tbody>
         </table>  
     </main>
 </div>
-
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         function actualizarFechaHora() {
@@ -265,7 +281,7 @@ $users_result = $conn->query($users_sql);
             });
             const fechaHoraElemento = document.getElementById("fechaHora");
             if (fechaHoraElemento) {
-                fechaHoraElemento.textContent = Fecha/Hora Ingreso: ${fechaHoraFormateada};
+                fechaHoraElemento.textContent = `Fecha/Hora Ingreso: ${fechaHoraFormateada}`;
             }
         }
         actualizarFechaHora();
@@ -334,6 +350,21 @@ $users_result = $conn->query($users_sql);
                 const dropdown = this.nextElementSibling;
                 dropdown.classList.toggle('active');
             });
+        });
+        document.getElementById('excelForm').addEventListener('submit', function(e) {
+            document.getElementById('excelTitulo').value = document.getElementById('searchTitulo').value;
+            document.getElementById('excelDestino').value = document.getElementById('searchDestino').value;
+            document.getElementById('excelFechaDesde').value = document.getElementById('searchFechaDesde').value;
+            document.getElementById('excelFechaHasta').value = document.getElementById('searchFechaHasta').value;
+            document.getElementById('excelUsuario').value = filters.usuario;
+        });
+
+        document.getElementById('pdfForm').addEventListener('submit', function(e) {
+            document.getElementById('pdfTitulo').value = document.getElementById('searchTitulo').value;
+            document.getElementById('pdfDestino').value = document.getElementById('searchDestino').value;
+            document.getElementById('pdfFechaDesde').value = document.getElementById('searchFechaDesde').value;
+            document.getElementById('pdfFechaHasta').value = document.getElementById('searchFechaHasta').value;
+            document.getElementById('pdfUsuario').value = filters.usuario;
         });
 
         document.querySelectorAll('.filter-dropdown option').forEach(option => {

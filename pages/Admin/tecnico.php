@@ -1,14 +1,16 @@
 <?php
-session_start(); 
+session_start();
 if (!isset($_SESSION['id_user'])) {
     header('Location: login.php');
     exit;
 }
 $role = $_SESSION['role'];
 
-require_once("../../conexion.php"); 
+require_once("../../conexion.php");
 
-$sql = "SELECT id_tecnico, nombre_tecnico, dni_tecnico, edad_tecnico, num_telef FROM tbl_tecnico";
+$sql = "SELECT id_tecnico, nombre_tecnico, dni_tecnico, edad_tecnico, num_telef 
+        FROM tbl_tecnico 
+        WHERE id_status = 1";
 $result = $conn->query($sql);
 ?>
 
@@ -45,7 +47,7 @@ $result = $conn->query($sql);
             align-items: center;
             justify-content: space-between;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            z-index: 1000; 
+            z-index: 1000;
         }
         #addBtn {
             background-color: rgb(3, 70, 141);
@@ -60,8 +62,7 @@ $result = $conn->query($sql);
         #addBtn:hover {
             background-color: rgb(3, 24, 46);
         }
-        .excelBtn {
-            background-color: #28a745;
+        .excelBtn, .pdfBtn {
             color: white !important;
             border: none;
             padding: 8px 15px;
@@ -69,26 +70,25 @@ $result = $conn->query($sql);
             border-radius: 5px;
             font-size: 14px;
             transition: background-color 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        .excelBtn {
+            background-color: #28a745;
         }
         .excelBtn:hover {
             background-color: #185732;
         }
         .pdfBtn {
             background-color: #dc3545;
-            color: white !important;
-            border: none;
-            padding: 8px 15px;
-            cursor: pointer;
-            border-radius: 5px;
-            font-size: 14px;
-            transition: background-color 0.3s ease;
         }
         .pdfBtn:hover {
             background-color: rgb(167, 35, 31);
         }
         .button-container {
-            display: flex; 
-            justify-content: center; 
+            display: flex;
+            justify-content: center;
             gap: 10px;
             margin-top: 20px;
         }
@@ -103,13 +103,81 @@ $result = $conn->query($sql);
             border-radius: 5px;
             font-size: 14px;
         }
+        .icon-btn {
+            background: none;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s ease;
+        }
+        .edit-icon-btn {
+            color: rgb(243, 126, 2);
+        }
+        .edit-icon-btn:hover {
+            color: rgb(163, 87, 5);
+            transform: scale(1.1);
+        }
+        .delete-icon-btn {
+            color: #dc3545;
+        }
+        .delete-icon-btn:hover {
+            color: #b02a37;
+            transform: scale(1.1);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .modal-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .confirmBtn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .confirmBtn:hover {
+            background-color: rgb(159, 38, 50);
+        }
+        .cancelBtn {
+            background-color: rgb(30, 172, 59);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .cancelBtn:hover {
+            background-color: rgb(23, 99, 23);
+        }
     </style>
 </head>
 <body class="bg-[var(--beige)]">
 <?php include '../header.php'; ?>
 <?php include 'sidebarad.php'; ?>
-
 <div class="main-content">
+<?php include '../../Uses/msg.php'; ?>
     <div class="flex justify-between items-center mt-4 px-4">
         <p class="text-white text-sm sm:text-lg text-shadow">
             <strong>User:</strong> <?php echo htmlspecialchars($_SESSION['username']); ?> 
@@ -155,19 +223,48 @@ $result = $conn->query($sql);
                 <?php while ($row = $result->fetch_assoc()): ?>
                 <tr>
                     <td><?php echo $row['id_tecnico']; ?></td>
-                    <td><?php echo $row['nombre_tecnico']; ?></td>
-                    <td><?php echo $row['dni_tecnico']; ?></td>
-                    <td><?php echo $row['edad_tecnico']; ?></td>
-                    <td><?php echo $row['num_telef']; ?></td>
+                    <td><?php echo htmlspecialchars($row['nombre_tecnico']); ?></td>
+                    <td><?php echo htmlspecialchars($row['dni_tecnico']); ?></td>
+                    <td><?php echo htmlspecialchars($row['edad_tecnico']); ?></td>
+                    <td><?php echo htmlspecialchars($row['num_telef']); ?></td>
                     <td>
                         <a href="../../Uses/editartec.php?id_tecnico=<?php echo $row['id_tecnico']; ?>">
-                            <button class="editBtn">Editar</button>
+                            <button class="edit-icon-btn icon-btn" title="Editar">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+                                </svg>
+                            </button>
                         </a>
+                        <button class="delete-icon-btn icon-btn deleteBtn" 
+                                data-id="<?php echo $row['id_tecnico']; ?>" 
+                                data-nombre="<?php echo htmlspecialchars($row['nombre_tecnico']); ?>" 
+                                data-dni="<?php echo htmlspecialchars($row['dni_tecnico']); ?>" 
+                                data-edad="<?php echo htmlspecialchars($row['edad_tecnico']); ?>" 
+                                data-telefono="<?php echo htmlspecialchars($row['num_telef']); ?>"
+                                title="Eliminar">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M5.5 5.5A.5.5 0 0 1 6 5h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1-.5-.5z"/>
+                                <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1z"/>
+                            </svg>
+                        </button>
                     </td>
                 </tr>
                 <?php endwhile; ?>
             </tbody>
         </table>
+
+        <!-- Modal de confirmación -->
+        <div id="deleteModal" class="modal">
+            <div class="modal-content">
+                <h2>Confirmar Eliminación</h2>
+                <p>¿Estás seguro de que deseas eliminar este técnico?</p>
+                <div id="modalData"></div>
+                <div class="modal-buttons">
+                    <button id="confirmDelete" class="confirmBtn">Confirmar</button>
+                    <button id="cancelDelete" class="cancelBtn">Cancelar</button>
+                </div>
+            </div>
+        </div>
     </main>
 </div>
 
@@ -198,6 +295,12 @@ $result = $conn->query($sql);
         const rows = table.getElementsByTagName('tr');
         const pdfForm = document.getElementById('pdfForm');
         const excelForm = document.getElementById('excelForm');
+        const modal = document.getElementById('deleteModal');
+        const modalData = document.getElementById('modalData');
+        const confirmDelete = document.getElementById('confirmDelete');
+        const cancelDelete = document.getElementById('cancelDelete');
+
+        let currentId = null;
 
         function applySearch() {
             const searchTerm = searchInput.value.toLowerCase();
@@ -218,11 +321,87 @@ $result = $conn->query($sql);
 
         // Actualizar el filtro al enviar el formulario
         pdfForm.addEventListener('submit', function() {
-            applySearch(); // Asegurarse de que el campo oculto esté actualizado antes de enviar
+            applySearch();
         });
         excelForm.addEventListener('submit', function() {
             applySearch();
         });
+
+        // Funcionalidad del modal de eliminación
+        document.querySelectorAll('.deleteBtn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                currentId = this.dataset.id;
+                const nombre = this.dataset.nombre;
+                const dni = this.dataset.dni;
+                const edad = this.dataset.edad;
+                const telefono = this.dataset.telefono;
+
+                modalData.innerHTML = `
+                    <p><strong>ID:</strong> ${currentId}</p>
+                    <p><strong>Nombre:</strong> ${nombre}</p>
+                    <p><strong>DNI:</strong> ${dni}</p>
+                    <p><strong>Edad:</strong> ${edad}</p>
+                    <p><strong>Número de Teléfono:</strong> ${telefono}</p>
+                `;
+                modal.style.display = 'block';
+            });
+        });
+
+        cancelDelete.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+
+        confirmDelete.addEventListener('click', function() {
+            fetch('../../Uses/eliminartec.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `id_tecnico=${encodeURIComponent(currentId)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const rows = document.querySelectorAll('tbody tr');
+                    rows.forEach(row => {
+                        const idCell = row.querySelector('td:first-child');
+                        if (idCell && idCell.textContent === currentId) {
+                            row.remove();
+                        }
+                    });
+                    modal.style.display = 'none';
+                    showNotification('El técnico ha sido eliminado correctamente');
+                } else {
+                    showNotification('Error al ocultar el técnico: ' + (data.message || 'Error desconocido'), true);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Ocurrió un error al intentar ocultar el técnico.', true);
+            });
+        });
+
+        window.addEventListener('click', function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Función para mostrar notificaciones dinámicas
+        function showNotification(message, isError = false) {
+            const notification = document.getElementById('notification');
+            const notificationText = notification.querySelector('span:first-child');
+            notificationText.textContent = message;
+            notification.classList.remove('hidden');
+            if (isError) {
+                notification.classList.add('error');
+            } else {
+                notification.classList.remove('error');
+            }
+            setTimeout(() => {
+                notification.classList.add('hidden');
+            }, 5000);
+        }
     });
 </script>
 </body>
