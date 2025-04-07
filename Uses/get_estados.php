@@ -1,7 +1,7 @@
 <?php
 include '../conexion.php';
 
-$sql = "SELECT id_estado, nombre_estado FROM tbl_estados";
+$sql = "SELECT id_estado, nombre_estado FROM tbl_estados WHERE id_status = 1";
 $result = $conn->query($sql);
 
 $estados = [];

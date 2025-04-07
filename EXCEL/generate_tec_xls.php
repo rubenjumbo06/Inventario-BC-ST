@@ -33,7 +33,7 @@ foreach ($encabezados as $index => $nombre) {
 // Construir la consulta SQL con filtro
 $sql = "SELECT id_tecnico, nombre_tecnico, dni_tecnico, edad_tecnico, num_telef 
         FROM tbl_tecnico 
-        WHERE 1=1";
+        WHERE 1=1 AND id_status = 1";
 $params = [];
 $types = "";
 

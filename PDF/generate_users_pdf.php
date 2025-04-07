@@ -7,9 +7,10 @@ require_once("../conexion.php");  // Ajusta la ruta según tu estructura
 $filter_search = isset($_POST['filter_search']) && !empty($_POST['filter_search']) ? $_POST['filter_search'] : null;
 $filter_rol = isset($_POST['filter_rol']) && !empty($_POST['filter_rol']) ? $_POST['filter_rol'] : null;
 
-// Construir la consulta SQL con filtros dinámicos
+// Construir la consulta SQL con filtros dinámicos y condición id_status = 1
 $sql = "SELECT id_user, nombre, apellidos, username, role, correo, telefono, fecha_creacion, fecha_modificacion 
-        FROM tbl_users WHERE 1=1";
+        FROM tbl_users 
+        WHERE id_status = 1"; // Condición fija para usuarios activos
 $params = [];
 $types = "";
 

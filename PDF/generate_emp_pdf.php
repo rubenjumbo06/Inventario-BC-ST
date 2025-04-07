@@ -7,8 +7,8 @@ require_once("../conexion.php");  // Ajusta la ruta según tu estructura
 $filter_nombre = isset($_POST['filter_nombre']) && !empty($_POST['filter_nombre']) ? $_POST['filter_nombre'] : null;
 $filter_ruc = isset($_POST['filter_ruc']) && !empty($_POST['filter_ruc']) ? $_POST['filter_ruc'] : null;
 
-// Construir la consulta SQL con filtros dinámicos
-$sql = "SELECT id_empresa, nombre, ruc, servicio_empresa FROM tbl_empresa WHERE 1=1";
+// Construir la consulta SQL con filtros dinámicos y filtro de id_status = 1
+$sql = "SELECT id_empresa, nombre, ruc, servicio_empresa FROM tbl_empresa WHERE id_status = 1"; // Added id_status = 1
 $params = [];
 $types = "";
 
@@ -95,5 +95,6 @@ header('Content-Type: application/pdf');
 header('Content-Disposition: attachment; filename="reporte_empresa.pdf"');
 header('Cache-Control: max-age=0');
 
-$pdf->Output('F', 'php://output'); // Enviar el PDF al navegador para descarga
+$pdf->Output('D', 'reporte_empresa.pdf'); // Usar 'D' para descarga directa
 exit();
+?>

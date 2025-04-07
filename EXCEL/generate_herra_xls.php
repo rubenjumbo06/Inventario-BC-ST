@@ -44,7 +44,7 @@ $sql = "SELECT h.id_herramientas, h.nombre_herramientas, h.cantidad_herramientas
         LEFT JOIN tbl_empresa e ON h.id_empresa = e.id_empresa
         LEFT JOIN tbl_estados es ON h.estado_herramientas = es.id_estado
         LEFT JOIN tbl_utilidad u ON h.utilidad_herramientas = u.id_utilidad
-        WHERE 1=1";
+        WHERE 1=1 AND h.id_status = 1";
 $params = [];
 $types = "";
 

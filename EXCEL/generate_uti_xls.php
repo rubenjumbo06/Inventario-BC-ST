@@ -31,7 +31,7 @@ foreach ($encabezados as $index => $nombre) {
 }
 
 // Construir la consulta SQL con el filtro de búsqueda
-$sql = "SELECT id_utilidad, nombre_utilidad, descripcion FROM tbl_utilidad WHERE 1=1";
+$sql = "SELECT id_utilidad, nombre_utilidad, descripcion FROM tbl_utilidad WHERE 1=1 AND id_status = 1";
 
 if (!empty($filtro_busqueda)) {
     $sql .= " AND (nombre_utilidad LIKE '%" . $conn->real_escape_string($filtro_busqueda) . "%' 

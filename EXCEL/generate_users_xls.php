@@ -34,7 +34,7 @@ foreach ($encabezados as $index => $nombre) {
 // Construir la consulta SQL con filtros
 $sql = "SELECT id_user, nombre, apellidos, username, role, correo, telefono, fecha_creacion, fecha_modificacion 
         FROM tbl_users 
-        WHERE 1=1";
+        WHERE 1=1 AND id_status = 1";
 $params = [];
 $types = "";
 

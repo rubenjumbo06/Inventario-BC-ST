@@ -73,11 +73,11 @@ $utilidades_result = $conn->query($utilidades_sql);
         <strong><h1 class="title text-shadow">Tabla de Utilidad</h1></strong>
         <div class="button-container">
             <a href="../../Uses/agregaruti.php"><button id="addBtn">Agregar Nuevo</button></a>
-            <form id="excelForm" action="../../EXCEL/generate_utilidad_xls.php" method="post">
+            <form id="excelForm" action="../../EXCEL/generate_uti_xls.php" method="post">
                 <input type="hidden" name="filter_nombre_utilidad" id="excel_filter_nombre_utilidad" value="">
                 <button type="submit" class="excelBtn">Descargar Excel</button>
             </form>
-            <form id="pdfForm" action="../../PDF/generate_utilidad_pdf.php" method="post">
+            <form id="pdfForm" action="../../PDF/generate_uti_pdf.php" method="post">
                 <input type="hidden" name="filter_nombre_utilidad" id="filter_nombre_utilidad" value="">
                 <button type="submit" class="pdfBtn">Descargar PDF</button>
             </form>

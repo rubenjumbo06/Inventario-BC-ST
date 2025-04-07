@@ -34,7 +34,7 @@ foreach ($encabezados as $index => $nombre) {
 // Construir la consulta SQL con filtros
 $sql = "SELECT id_empresa, nombre, ruc, servicio_empresa 
         FROM tbl_empresa 
-        WHERE 1=1";
+        WHERE 1=1 AND id_status = 1";
 $params = [];
 $types = "";
 

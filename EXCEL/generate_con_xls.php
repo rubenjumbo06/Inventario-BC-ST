@@ -42,7 +42,7 @@ $sql = "SELECT c.id_consumibles, c.nombre_consumibles, c.cantidad_consumibles,
         LEFT JOIN tbl_estados es ON c.estado_consumibles = es.id_estado
         LEFT JOIN tbl_utilidad u ON c.utilidad_consumibles = u.id_utilidad
         LEFT JOIN tbl_users us ON c.id_user = us.id_user
-        WHERE 1=1";
+        WHERE 1=1 AND c.id_status = 1";
 
 // Aplicar filtros
 if (!empty($filter_empresa)) {

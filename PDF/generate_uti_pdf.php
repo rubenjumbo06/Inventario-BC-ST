@@ -12,10 +12,8 @@ class PDF extends FPDF {
         if (!file_exists($image_path)) {
             die("Error: La imagen de fondo no existe en $image_path");
         }
-
         $this->Image($image_path, 98.5, 65, 100, 80);
         $this->Image(__DIR__ . '/../assets/img/logo.png', 15, 10, 25);
-
         $this->SetFont('Arial', 'B', 24);
         $this->SetY(20);
         $this->Cell(0, 20, 'Reporte de Utilidad', 0, 1, 'C');
@@ -30,35 +28,10 @@ class PDF extends FPDF {
     }
 }
 
-$pdf = new PDF('L');
-$pdf->AddPage();
-
-$pdf->SetFont('Arial', 'B', 10);
-$pdf->SetFillColor(50, 168, 82);
-$pdf->SetTextColor(255);
-
-// Configuración de columnas
-$widths = [
-    'id' => 15,
-    'nombre' => 70,
-    'descripcion' => 150
-];
-$tableWidth = array_sum($widths);
-$startX = ($pdf->GetPageWidth() - $tableWidth) / 2;
-$pdf->SetX($startX);
-
-// Encabezado
-$pdf->Cell($widths['id'], 10, 'ID', 1, 0, 'C', true);
-$pdf->Cell($widths['nombre'], 10, 'Nombre', 1, 0, 'C', true);
-$pdf->Cell($widths['descripcion'], 10, 'Descripcion', 1, 1, 'C', true);
-
-$pdf->SetFont('Arial', '', 10);
-$pdf->SetTextColor(0);
-
-// Construir la consulta SQL con filtro en nombre y descripción
+// Construir la consulta SQL
 $sql = "SELECT id_utilidad, nombre_utilidad, descripcion 
         FROM tbl_utilidad 
-        WHERE 1=1";
+        WHERE id_status = 1";
 $params = [];
 $types = "";
 
@@ -75,12 +48,47 @@ if (!$stmt) {
     die("Error en la preparación de la consulta: " . $conn->error);
 }
 if (!empty($params)) {
-    $stmt->bind_param($types, ...$params);
+    if (!$stmt->bind_param($types, ...$params)) {
+        die("Error al vincular parámetros: " . $stmt->error);
+    }
 }
-$stmt->execute();
+if (!$stmt->execute()) {
+    die("Error al ejecutar la consulta: " . $stmt->error);
+}
 $result = $stmt->get_result();
 
-// Generar filas manteniendo el estilo de tabla
+// Verificar si hay datos
+$row_count = $result->num_rows;
+if ($row_count == 0) {
+    die("No se encontraron utilidades con id_status = 1");
+}
+
+// Crear el PDF
+$pdf = new PDF('L');
+$pdf->AddPage();
+$pdf->SetFont('Arial', 'B', 10);
+$pdf->SetFillColor(50, 168, 82);
+$pdf->SetTextColor(255);
+
+// Configuración de columnas
+$widths = [
+    'id' => 15,
+    'nombre' => 70,
+    'descripcion' => 150
+];
+$tableWidth = array_sum($widths);
+$startX = ($pdf->GetPageWidth() - $tableWidth) / 2;
+
+// Encabezado
+$pdf->SetX($startX);
+$pdf->Cell($widths['id'], 10, 'ID', 1, 0, 'C', true);
+$pdf->Cell($widths['nombre'], 10, 'Nombre', 1, 0, 'C', true);
+$pdf->Cell($widths['descripcion'], 10, 'Descripcion', 1, 1, 'C', true);
+
+$pdf->SetFont('Arial', '', 10);
+$pdf->SetTextColor(0);
+
+// Generar filas
 while ($row = $result->fetch_assoc()) {
     $pdf->SetX($startX);
     $pdf->Cell($widths['id'], 10, $row['id_utilidad'], 1, 0, 'C');
@@ -92,10 +100,9 @@ while ($row = $result->fetch_assoc()) {
 $stmt->close();
 $conn->close();
 
-// Forzar la descarga del PDF
+// Enviar el PDF
 header('Content-Type: application/pdf');
 header('Content-Disposition: attachment; filename="reporte_utilidades.pdf"');
 header('Cache-Control: max-age=0');
-$pdf->Output('D', 'reporte_utilidades.pdf');
+$pdf->Output('F', 'php://output');
 exit();
-?>

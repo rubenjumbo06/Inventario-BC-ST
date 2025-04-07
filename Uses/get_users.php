@@ -1,7 +1,7 @@
 <?php   
 include '../conexion.php';
 
-$sql = "SELECT id_user, username FROM tbl_users";
+$sql = "SELECT id_user, username FROM tbl_users WHERE id_status = 1";
 $result = $conn->query($sql);
 
 $users = [];

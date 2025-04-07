@@ -40,7 +40,7 @@ $filter_utilidad = isset($_POST['filter_utilidad']) ? $_POST['filter_utilidad'] 
 $filter_usuario = isset($_POST['filter_usuario']) ? $_POST['filter_usuario'] : '';
 $filter_search = isset($_POST['filter_search']) ? $_POST['filter_search'] : '';
 
-// Construir la consulta con filtros
+// Construir la consulta con filtros y filtro de id_status = 1
 $sql = "SELECT c.id_consumibles, c.nombre_consumibles, c.cantidad_consumibles, 
         e.nombre AS nombre_empresa, es.nombre_estado, u.nombre_utilidad, c.fecha_ingreso, us.nombre AS nombre_usuario
         FROM tbl_consumibles c
@@ -48,7 +48,7 @@ $sql = "SELECT c.id_consumibles, c.nombre_consumibles, c.cantidad_consumibles,
         LEFT JOIN tbl_estados es ON c.estado_consumibles = es.id_estado
         LEFT JOIN tbl_utilidad u ON c.utilidad_consumibles = u.id_utilidad
         LEFT JOIN tbl_users us ON c.id_user = us.id_user
-        WHERE 1=1";
+        WHERE c.id_status = 1"; // Added id_status = 1 condition
 
 if ($filter_empresa) $sql .= " AND e.nombre = '" . $conn->real_escape_string($filter_empresa) . "'";
 if ($filter_estado) $sql .= " AND es.nombre_estado = '" . $conn->real_escape_string($filter_estado) . "'";

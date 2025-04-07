@@ -6,8 +6,10 @@ require_once("../conexion.php");  // Ajusta la ruta según tu estructura
 // Obtener el filtro de búsqueda desde el formulario POST
 $filter_search = isset($_POST['filter_search']) && !empty($_POST['filter_search']) ? $_POST['filter_search'] : null;
 
-// Construir la consulta SQL con filtro dinámico
-$sql = "SELECT id_tecnico, nombre_tecnico, dni_tecnico, edad_tecnico, num_telef FROM tbl_tecnico WHERE 1=1";
+// Construir la consulta SQL con filtro dinámico y condición id_status = 1
+$sql = "SELECT id_tecnico, nombre_tecnico, dni_tecnico, edad_tecnico, num_telef 
+        FROM tbl_tecnico 
+        WHERE id_status = 1"; // Agregamos la condición fija
 $params = [];
 $types = "";
 

@@ -39,7 +39,7 @@ $sql = "SELECT a.id_activos, a.nombre_activos, a.cantidad_activos, es.nombre_est
         FROM tbl_activos a
         LEFT JOIN tbl_empresa e ON a.id_empresa = e.id_empresa
         LEFT JOIN tbl_estados es ON a.estado_activos = es.id_estado
-        WHERE 1=1";
+        WHERE 1=1 AND a.id_status = 1";
 
 // Aplicar filtros
 if (!empty($filtro_estado)) {

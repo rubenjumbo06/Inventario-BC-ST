@@ -93,7 +93,7 @@ $pdf->Ln();
 $pdf->SetFont('Arial', '', 10);
 $pdf->SetTextColor(0);
 
-// Construir la consulta SQL con filtros y búsqueda
+// Construir la consulta SQL con filtros, búsqueda y el filtro de id_status = 1
 $sql = "SELECT h.id_herramientas, h.nombre_herramientas, h.cantidad_herramientas,
         h.id_empresa, e.nombre as empresa_nombre,
         h.estado_herramientas, es.nombre_estado,
@@ -103,7 +103,7 @@ $sql = "SELECT h.id_herramientas, h.nombre_herramientas, h.cantidad_herramientas
         LEFT JOIN tbl_empresa e ON h.id_empresa = e.id_empresa
         LEFT JOIN tbl_estados es ON h.estado_herramientas = es.id_estado
         LEFT JOIN tbl_utilidad u ON h.utilidad_herramientas = u.id_utilidad
-        WHERE 1=1";
+        WHERE h.id_status = 1"; // Added id_status = 1 condition
 
 if ($empresa_filter) {
     $sql .= " AND e.nombre = '" . $conn->real_escape_string($empresa_filter) . "'";
